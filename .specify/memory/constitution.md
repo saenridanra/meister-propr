@@ -56,7 +56,8 @@ structure MUST be justified in the plan's Complexity Tracking table.
 
 Every request MUST validate `X-Client-Key` against the `IClientRegistry` (initially
 backed by configuration/environment variables, swappable to a persistent store later)
-before any business logic runs — unknown or missing keys return `401` immediately; the `X-Ado-Token` header MUST NEVER be logged, stored,
+before any business logic runs — unknown or missing keys return `401` immediately; the `X-Ado-Token` header MUST NEVER
+be logged, stored,
 cached beyond the request lifetime, or included in any response body — it is
 forwarded to the ADO API only; Foundry credentials come exclusively from environment
 variables or Azure Key Vault references — they MUST NOT be accepted from request data

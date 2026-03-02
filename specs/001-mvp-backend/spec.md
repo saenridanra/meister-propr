@@ -227,13 +227,23 @@ backend, call GET /healthz, and receive `200 OK`. Then submit a full review cycl
 
 ### Session 2026-03-02
 
-- Q: Should `ChangedFile` carry full file content, unified diff, or both? → A: Both — full file content plus the unified diff, to maximise AI review quality and enable accurate line-number attribution.
-- Q: How should AI review findings be posted back to the ADO pull request? → A: Inline thread per finding anchored to file + line where available; PR-level thread fallback for findings with no file attribution.
-- Q: What AI SDK backs the `IAiReviewCore` infrastructure implementation? → A: `Microsoft.Agents.AI` (Foundry); the domain interface MUST NOT leak SDK types — accepts domain entities, returns `ReviewResult` only.
-- Q: Should the MVP enforce a hard PR size limit? → A: No — no hard limit for MVP; oversized AI calls fail naturally and surface as a `failed` job with the AI endpoint's error message.
-- Q: How many jobs should the background worker process concurrently? → A: Unbounded — all pending jobs start immediately in parallel; concurrency limits deferred to a future iteration.
-- Q: Should the backend use the user's ADO token for ADO API operations? → A: No — the backend authenticates to ADO using its own managed identity ("Meister ProPR"); the `X-Ado-Token` is used only to verify the requesting user is an authenticated ADO org member and is never forwarded or used for any API calls.
-- Q: How does the backend authenticate to ADO as "Meister ProPR" in local development where managed identity is unavailable? → A: `DefaultAzureCredential` — uses managed identity in Azure automatically; for local dev, a service principal is configured via `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` env vars, which `DefaultAzureCredential` resolves without code changes.
+- Q: Should `ChangedFile` carry full file content, unified diff, or both? → A: Both — full file content plus the unified
+  diff, to maximise AI review quality and enable accurate line-number attribution.
+- Q: How should AI review findings be posted back to the ADO pull request? → A: Inline thread per finding anchored to
+  file + line where available; PR-level thread fallback for findings with no file attribution.
+- Q: What AI SDK backs the `IAiReviewCore` infrastructure implementation? → A: `Microsoft.Agents.AI` (Foundry); the
+  domain interface MUST NOT leak SDK types — accepts domain entities, returns `ReviewResult` only.
+- Q: Should the MVP enforce a hard PR size limit? → A: No — no hard limit for MVP; oversized AI calls fail naturally and
+  surface as a `failed` job with the AI endpoint's error message.
+- Q: How many jobs should the background worker process concurrently? → A: Unbounded — all pending jobs start
+  immediately in parallel; concurrency limits deferred to a future iteration.
+- Q: Should the backend use the user's ADO token for ADO API operations? → A: No — the backend authenticates to ADO
+  using its own managed identity ("Meister ProPR"); the `X-Ado-Token` is used only to verify the requesting user is an
+  authenticated ADO org member and is never forwarded or used for any API calls.
+- Q: How does the backend authenticate to ADO as "Meister ProPR" in local development where managed identity is
+  unavailable? → A: `DefaultAzureCredential` — uses managed identity in Azure automatically; for local dev, a service
+  principal is configured via `AZURE_CLIENT_ID`, `AZURE_TENANT_ID`, and `AZURE_CLIENT_SECRET` env vars,
+  which `DefaultAzureCredential` resolves without code changes.
 
 ## Assumptions
 

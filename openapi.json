@@ -11,21 +11,29 @@
         "operationId": "SubmitReview",
         "summary": "Submit a pull request for AI review",
         "description": "Enqueues a background review job. The backend fetches the changed files directly from ADO using the supplied token, runs the AI review, and posts comments back to the pull request on the specified iteration.",
-        "security": [{ "clientKey": [] }],
+        "security": [
+          {
+            "clientKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "X-Ado-Token",
             "in": "header",
             "required": true,
-            "description": "ADO access token used by the backend to fetch PR data and post review comments.",
-            "schema": { "type": "string" }
+            "description": "ADO personal access token or OAuth token used solely to verify that the requesting user is an authenticated member of the configured ADO organisation. The backend uses its own managed identity for all ADO API operations (file fetching, comment posting). This token is never forwarded, stored, cached beyond the request lifetime, or included in any response.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
           "required": true,
           "content": {
             "application/json": {
-              "schema": { "$ref": "#/components/schemas/ReviewRequest" }
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
             }
           }
         },
@@ -34,26 +42,38 @@
             "description": "Review job accepted and queued.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ReviewJob" }
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewJob"
+                }
               }
             }
           },
-          "401": { "description": "Invalid or missing client key." },
-          "422": { "description": "Request validation failed." }
+          "401": {
+            "description": "Invalid or missing client key."
+          },
+          "422": {
+            "description": "Request validation failed."
+          }
         }
       },
       "get": {
         "operationId": "ListReviews",
         "summary": "List review jobs for this client",
         "description": "Returns all review jobs submitted under this client key, newest first.",
-        "security": [{ "clientKey": [] }],
+        "security": [
+          {
+            "clientKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "X-Ado-Token",
             "in": "header",
             "required": true,
-            "description": "ADO access token used by the backend to fetch PR data and post review comments.",
-            "schema": { "type": "string" }
+            "description": "ADO personal access token or OAuth token used solely to verify that the requesting user is an authenticated member of the configured ADO organisation. The backend uses its own managed identity for all ADO API operations (file fetching, comment posting). This token is never forwarded, stored, cached beyond the request lifetime, or included in any response.",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -63,12 +83,16 @@
               "application/json": {
                 "schema": {
                   "type": "array",
-                  "items": { "$ref": "#/components/schemas/ReviewListItem" }
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewListItem"
+                  }
                 }
               }
             }
           },
-          "401": { "description": "Invalid or missing client key." }
+          "401": {
+            "description": "Invalid or missing client key."
+          }
         }
       }
     },
@@ -76,20 +100,29 @@
       "get": {
         "operationId": "GetReview",
         "summary": "Get the status and result of a review job",
-        "security": [{ "clientKey": [] }],
+        "security": [
+          {
+            "clientKey": []
+          }
+        ],
         "parameters": [
           {
             "name": "X-Ado-Token",
             "in": "header",
             "required": true,
-            "description": "ADO access token used by the backend to fetch PR data and post review comments.",
-            "schema": { "type": "string" }
+            "description": "ADO personal access token or OAuth token used solely to verify that the requesting user is an authenticated member of the configured ADO organisation. The backend uses its own managed identity for all ADO API operations (file fetching, comment posting). This token is never forwarded, stored, cached beyond the request lifetime, or included in any response.",
+            "schema": {
+              "type": "string"
+            }
           },
           {
             "name": "jobId",
             "in": "path",
             "required": true,
-            "schema": { "type": "string", "format": "uuid" }
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -97,12 +130,18 @@
             "description": "Review job status and, once completed, its result.",
             "content": {
               "application/json": {
-                "schema": { "$ref": "#/components/schemas/ReviewStatusResponse" }
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewStatusResponse"
+                }
               }
             }
           },
-          "401": { "description": "Invalid or missing client key." },
-          "404": { "description": "Job not found." }
+          "401": {
+            "description": "Invalid or missing client key."
+          },
+          "404": {
+            "description": "Job not found."
+          }
         }
       }
     }
@@ -119,7 +158,13 @@
     "schemas": {
       "ReviewRequest": {
         "type": "object",
-        "required": ["organizationUrl", "projectId", "repositoryId", "pullRequestId", "iterationId"],
+        "required": [
+          "organizationUrl",
+          "projectId",
+          "repositoryId",
+          "pullRequestId",
+          "iterationId"
+        ],
         "properties": {
           "organizationUrl": {
             "type": "string",
@@ -153,7 +198,9 @@
       },
       "ReviewJob": {
         "type": "object",
-        "required": ["jobId"],
+        "required": [
+          "jobId"
+        ],
         "properties": {
           "jobId": {
             "type": "string",
@@ -164,33 +211,76 @@
       },
       "ReviewJobStatus": {
         "type": "string",
-        "enum": ["pending", "processing", "completed", "failed"],
+        "enum": [
+          "pending",
+          "processing",
+          "completed",
+          "failed"
+        ],
         "description": "Current processing state of the review job."
       },
       "ReviewListItem": {
         "type": "object",
-        "required": ["jobId", "status", "organizationUrl", "projectId", "repositoryId", "pullRequestId", "iterationId", "submittedAt"],
+        "required": [
+          "jobId",
+          "status",
+          "organizationUrl",
+          "projectId",
+          "repositoryId",
+          "pullRequestId",
+          "iterationId",
+          "submittedAt"
+        ],
         "properties": {
-          "jobId": { "type": "string", "format": "uuid" },
-          "status": { "$ref": "#/components/schemas/ReviewJobStatus" },
-          "organizationUrl": { "type": "string", "format": "uri" },
-          "projectId": { "type": "string" },
-          "repositoryId": { "type": "string" },
-          "pullRequestId": { "type": "integer" },
-          "iterationId": { "type": "integer" },
-          "submittedAt": { "type": "string", "format": "date-time" },
-          "completedAt": { "type": "string", "format": "date-time", "nullable": true }
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ReviewJobStatus"
+          },
+          "organizationUrl": {
+            "type": "string",
+            "format": "uri"
+          },
+          "projectId": {
+            "type": "string"
+          },
+          "repositoryId": {
+            "type": "string"
+          },
+          "pullRequestId": {
+            "type": "integer"
+          },
+          "iterationId": {
+            "type": "integer"
+          },
+          "submittedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
         }
       },
       "ReviewStatusResponse": {
         "allOf": [
-          { "$ref": "#/components/schemas/ReviewListItem" },
+          {
+            "$ref": "#/components/schemas/ReviewListItem"
+          },
           {
             "type": "object",
             "properties": {
               "result": {
                 "nullable": true,
-                "allOf": [{ "$ref": "#/components/schemas/ReviewResult" }],
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/ReviewResult"
+                  }
+                ],
                 "description": "Present when status is 'completed'."
               },
               "error": {
@@ -204,7 +294,10 @@
       },
       "ReviewResult": {
         "type": "object",
-        "required": ["summary", "comments"],
+        "required": [
+          "summary",
+          "comments"
+        ],
         "properties": {
           "summary": {
             "type": "string",
@@ -212,13 +305,18 @@
           },
           "comments": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/ReviewComment" }
+            "items": {
+              "$ref": "#/components/schemas/ReviewComment"
+            }
           }
         }
       },
       "ReviewComment": {
         "type": "object",
-        "required": ["severity", "message"],
+        "required": [
+          "severity",
+          "message"
+        ],
         "properties": {
           "filePath": {
             "type": "string",
@@ -232,9 +330,16 @@
           },
           "severity": {
             "type": "string",
-            "enum": ["info", "warning", "error", "suggestion"]
+            "enum": [
+              "info",
+              "warning",
+              "error",
+              "suggestion"
+            ]
           },
-          "message": { "type": "string" }
+          "message": {
+            "type": "string"
+          }
         }
       }
     }
