@@ -5,18 +5,6 @@ namespace MeisterProPR.Domain.Tests.Entities;
 
 public class ReviewJobTests
 {
-    private static ReviewJob CreateJob(
-        Guid? id = null,
-        string clientKey = "test-client",
-        string orgUrl = "https://dev.azure.com/myorg",
-        string projectId = "proj-1",
-        string repoId = "repo-1",
-        int prId = 1,
-        int iterationId = 1)
-    {
-        return new ReviewJob(id ?? Guid.NewGuid(), clientKey, orgUrl, projectId, repoId, prId, iterationId);
-    }
-
     [Fact]
     public void Constructor_CompletedAtIsNull()
     {
@@ -36,6 +24,22 @@ public class ReviewJobTests
     {
         var job = CreateJob();
         Assert.NotEqual(Guid.Empty, job.Id);
+    }
+
+    [Fact]
+    public void Constructor_NullClientKey_IsValid()
+    {
+        // T012: crawler-initiated jobs have no client key — null must be accepted
+        var job = new ReviewJob(Guid.NewGuid(), null, "https://dev.azure.com/org", "proj", "repo", 1, 1);
+        Assert.Null(job.ClientKey);
+        Assert.Equal(JobStatus.Pending, job.Status);
+    }
+
+    [Fact]
+    public void Constructor_ProcessingStartedAt_IsNullByDefault()
+    {
+        var job = CreateJob();
+        Assert.Null(job.ProcessingStartedAt);
     }
 
     [Fact]
@@ -66,6 +70,7 @@ public class ReviewJobTests
     [Fact]
     public void Constructor_ThrowsOnEmptyClientKey()
     {
+        // T012: empty (non-null) clientKey is still invalid — only null is allowed for crawler jobs
         Assert.Throws<ArgumentException>(() => CreateJob(clientKey: ""));
     }
 
@@ -106,6 +111,13 @@ public class ReviewJobTests
     }
 
     [Fact]
+    public void Constructor_WhitespaceClientKey_Throws()
+    {
+        // T012: whitespace is also invalid (same as empty)
+        Assert.Throws<ArgumentException>(() => CreateJob(clientKey: "   "));
+    }
+
+    [Fact]
     public void ResultAndErrorMessage_AreNullByDefault()
     {
         var job = CreateJob();
@@ -119,5 +131,17 @@ public class ReviewJobTests
         var job = CreateJob();
         job.Status = JobStatus.Processing;
         Assert.Equal(JobStatus.Processing, job.Status);
+    }
+
+    private static ReviewJob CreateJob(
+        Guid? id = null,
+        string clientKey = "test-client",
+        string orgUrl = "https://dev.azure.com/myorg",
+        string projectId = "proj-1",
+        string repoId = "repo-1",
+        int prId = 1,
+        int iterationId = 1)
+    {
+        return new ReviewJob(id ?? Guid.NewGuid(), clientKey, orgUrl, projectId, repoId, prId, iterationId);
     }
 }

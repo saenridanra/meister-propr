@@ -1,22 +1,40 @@
 version: '3.8'
 services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_DB: meisterpropr
+      POSTGRES_USER: postgres
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d meisterpropr" ]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
   meisterpropr:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      - MEISTER_CLIENT_KEYS=${MEISTER_CLIENT_KEYS}
+      - MEISTER_CLIENT_KEYS=${MEISTER_CLIENT_KEYS:-}
+      - MEISTER_ADMIN_KEY=${MEISTER_ADMIN_KEY}
+      - DB_CONNECTION_STRING=${DB_CONNECTION_STRING:-Host=postgres;Port=5432;Database=meisterpropr;Username=postgres;Password=devpass}
       - AI_ENDPOINT=${AI_ENDPOINT}
       - AI_DEPLOYMENT=${AI_DEPLOYMENT}
-      # AI_API_KEY: optional — omit to use DefaultAzureCredential (managed identity / service principal)
       - AI_API_KEY=${AI_API_KEY:-}
       - AZURE_CLIENT_ID=${AZURE_CLIENT_ID:-}
       - AZURE_TENANT_ID=${AZURE_TENANT_ID:-}
       - AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET:-}
-      # CORS_ORIGINS: optional extra comma-separated origins beyond the built-in defaults
-      # (localhost:3000, dev.azure.com, *.visualstudio.com)
       - CORS_ORIGINS=${CORS_ORIGINS:-}
       - ASPNETCORE_ENVIRONMENT=Production
     healthcheck:
@@ -25,3 +43,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 10s
+
+volumes:
+  postgres_data:

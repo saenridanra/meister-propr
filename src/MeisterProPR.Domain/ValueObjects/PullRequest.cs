@@ -1,3 +1,5 @@
+using MeisterProPR.Domain.Enums;
+
 namespace MeisterProPR.Domain.ValueObjects;
 
 /// <summary>
@@ -13,6 +15,7 @@ namespace MeisterProPR.Domain.ValueObjects;
 /// <param name="SourceBranch">Source branch name.</param>
 /// <param name="TargetBranch">Target branch name.</param>
 /// <param name="ChangedFiles">List of changed files in the pull request.</param>
+/// <param name="Status">Current status of the pull request (defaults to <see cref="PrStatus.Active" />).</param>
 public sealed record PullRequest(
     string OrganizationUrl,
     string ProjectId,
@@ -23,4 +26,5 @@ public sealed record PullRequest(
     string? Description,
     string SourceBranch,
     string TargetBranch,
-    IReadOnlyList<ChangedFile> ChangedFiles);
+    IReadOnlyList<ChangedFile> ChangedFiles,
+    PrStatus Status = PrStatus.Active);

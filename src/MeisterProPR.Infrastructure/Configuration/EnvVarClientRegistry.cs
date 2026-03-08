@@ -33,4 +33,10 @@ public sealed class EnvVarClientRegistry : IClientRegistry
     {
         return this._keys.Contains(clientKey);
     }
+
+    public Task<Guid?> GetClientIdByKeyAsync(string key, CancellationToken ct = default)
+    {
+        // EnvVarClientRegistry has no UUID concept — keys are validated but have no stored UUID.
+        return Task.FromResult<Guid?>(null);
+    }
 }

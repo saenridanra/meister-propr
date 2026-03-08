@@ -4,6 +4,10 @@ Auto-generated from all feature plans. Last updated: 2026-03-03
 
 ## Active Technologies
 
+- C# / .NET 10, TFM `net10.0` + ASP.NET Core MVC, EF Core 10.0.3, Npgsql.EntityFrameworkCore.PostgreSQL 10.0.0,
+  Microsoft.TeamFoundationServer.Client 20.269.0-preview (existing) (002-pr-review-persistence)
+- PostgreSQL 17 via EF Core (replaces in-memory ConcurrentDictionary) (002-pr-review-persistence)
+
 - C# / .NET 10, TFM `net10.0` + ASP.NET Core MVC, Microsoft Agent Framework (001-mvp-backend)
 
 ## Project Structure
@@ -28,7 +32,7 @@ Dependency rule: Api → Application → Domain ← Infrastructure (Infrastructu
 ```bash
 dotnet run --project src/MeisterProPR.Api        # Run locally
 dotnet watch --project src/MeisterProPR.Api      # Hot-reload
-dotnet test                                       # Run all tests
+dotnet test                                      # Run all tests
 docker compose up                                 # Production-like container stack
 ```
 
@@ -40,6 +44,9 @@ docker compose up                                 # Production-like container st
 - Serilog for logging; destructuring policies MUST scrub `X-Client-Key`, `X-Ado-Token`, `AZURE_CLIENT_SECRET`
 
 ## Recent Changes
+
+- 002-pr-review-persistence: Added C# / .NET 10, TFM `net10.0` + ASP.NET Core MVC, EF Core 10.0.3,
+  Npgsql.EntityFrameworkCore.PostgreSQL 10.0.0, Microsoft.TeamFoundationServer.Client 20.269.0-preview (existing)
 
 - 001-mvp-backend: Added C# / .NET 10, TFM `net10.0` + ASP.NET Core MVC, Microsoft Agent Framework
 
@@ -76,13 +83,16 @@ See `.specify/memory/constitution.md` for full text. Summary:
 
 ## Key Environment Variables
 
-| Variable              | Purpose                                             |
-|-----------------------|-----------------------------------------------------|
-| `MEISTER_CLIENT_KEYS` | Comma-separated valid client keys                   |
-| `AI_ENDPOINT`         | Azure OpenAI endpoint URL                           |
-| `AI_DEPLOYMENT`       | Model deployment name (e.g. `gpt-4o`)               |
-| `AZURE_CLIENT_ID`     | Service principal client ID (local dev)             |
-| `AZURE_TENANT_ID`     | Azure tenant ID (local dev)                         |
-| `AZURE_CLIENT_SECRET` | Service principal secret (local dev — never commit) |
+| Variable                    | Purpose                                                                                        |
+|-----------------------------|------------------------------------------------------------------------------------------------|
+| `MEISTER_CLIENT_KEYS`       | Comma-separated valid client keys (legacy; bootstrap seed in DB mode, required in non-DB mode) |
+| `MEISTER_ADMIN_KEY`         | Admin API key for `X-Admin-Key` header; required for `/clients` and `/jobs`                    |
+| `DB_CONNECTION_STRING`      | PostgreSQL connection string; when set, enables DB mode (EF Core + Npgsql)                     |
+| `PR_CRAWL_INTERVAL_SECONDS` | Polling interval for `AdoPrCrawlerWorker` (default 60 s, minimum 10 s)                         |
+| `AI_ENDPOINT`               | Azure OpenAI endpoint URL                                                                      |
+| `AI_DEPLOYMENT`             | Model deployment name (e.g. `gpt-4o`)                                                          |
+| `AZURE_CLIENT_ID`           | Service principal client ID (local dev)                                                        |
+| `AZURE_TENANT_ID`           | Azure tenant ID (local dev)                                                                    |
+| `AZURE_CLIENT_SECRET`       | Service principal secret (local dev — never commit)                                            |
 
 <!-- MANUAL ADDITIONS END -->

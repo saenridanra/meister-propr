@@ -10,35 +10,6 @@ public sealed class InMemoryJobRepository : IJobRepository
 {
     private readonly ConcurrentDictionary<Guid, ReviewJob> _jobs = new();
 
-    public ReviewJob? FindActiveJob(string organizationUrl, string projectId, string repositoryId, int pullRequestId, int iterationId)
-    {
-        return this._jobs.Values.FirstOrDefault(j =>
-            j.OrganizationUrl == organizationUrl &&
-            j.ProjectId == projectId &&
-            j.RepositoryId == repositoryId &&
-            j.PullRequestId == pullRequestId &&
-            j.IterationId == iterationId &&
-            j.Status != JobStatus.Failed);
-    }
-
-    public void Add(ReviewJob job)
-    {
-        this._jobs[job.Id] = job;
-    }
-
-    public ReviewJob? GetById(Guid id)
-    {
-        return this._jobs.GetValueOrDefault(id);
-    }
-
-    public IReadOnlyList<ReviewJob> GetAllForClient(string clientKey)
-    {
-        return this._jobs.Values
-            .Where(j => j.ClientKey == clientKey)
-            .OrderByDescending(j => j.SubmittedAt)
-            .ToList();
-    }
-
     public bool TryTransition(Guid id, JobStatus from, JobStatus to)
     {
         if (!this._jobs.TryGetValue(id, out var job))
@@ -58,17 +29,72 @@ public sealed class InMemoryJobRepository : IJobRepository
         }
     }
 
-    public void SetResult(Guid id, ReviewResult result)
+    public IReadOnlyList<ReviewJob> GetAllForClient(string clientKey)
     {
-        if (this._jobs.TryGetValue(id, out var job))
+        return this._jobs.Values
+            .Where(j => j.ClientKey == clientKey)
+            .OrderByDescending(j => j.SubmittedAt)
+            .ToList();
+    }
+
+    public IReadOnlyList<ReviewJob> GetPendingJobs()
+    {
+        return this._jobs.Values
+            .Where(j => j.Status == JobStatus.Pending)
+            .OrderBy(j => j.SubmittedAt)
+            .ToList();
+    }
+
+    public ReviewJob? FindActiveJob(
+        string organizationUrl,
+        string projectId,
+        string repositoryId,
+        int pullRequestId,
+        int iterationId)
+    {
+        return this._jobs.Values.FirstOrDefault(j =>
+            j.OrganizationUrl == organizationUrl &&
+            j.ProjectId == projectId &&
+            j.RepositoryId == repositoryId &&
+            j.PullRequestId == pullRequestId &&
+            j.IterationId == iterationId &&
+            j.Status != JobStatus.Failed);
+    }
+
+    public ReviewJob? GetById(Guid id)
+    {
+        return this._jobs.GetValueOrDefault(id);
+    }
+
+    public Task<(int total, IReadOnlyList<ReviewJob> items)> GetAllJobsAsync(
+        int limit,
+        int offset,
+        JobStatus? status,
+        CancellationToken ct = default)
+    {
+        var query = this._jobs.Values.AsEnumerable();
+        if (status.HasValue)
         {
-            lock (job)
-            {
-                job.Result = result;
-                job.Status = JobStatus.Completed;
-                job.CompletedAt = DateTimeOffset.UtcNow;
-            }
+            query = query.Where(j => j.Status == status.Value);
         }
+
+        var ordered = query.OrderByDescending(j => j.SubmittedAt).ToList();
+        var total = ordered.Count;
+        var items = (IReadOnlyList<ReviewJob>)ordered.Skip(offset).Take(limit).ToList();
+        return Task.FromResult((total, items));
+    }
+
+    public Task<IReadOnlyList<ReviewJob>> GetProcessingJobsAsync(CancellationToken ct = default)
+    {
+        var result = (IReadOnlyList<ReviewJob>)this._jobs.Values
+            .Where(j => j.Status == JobStatus.Processing)
+            .ToList();
+        return Task.FromResult(result);
+    }
+
+    public void Add(ReviewJob job)
+    {
+        this._jobs[job.Id] = job;
     }
 
     public void SetFailed(Guid id, string errorMessage)
@@ -84,11 +110,16 @@ public sealed class InMemoryJobRepository : IJobRepository
         }
     }
 
-    public IReadOnlyList<ReviewJob> GetPendingJobs()
+    public void SetResult(Guid id, ReviewResult result)
     {
-        return this._jobs.Values
-            .Where(j => j.Status == JobStatus.Pending)
-            .OrderBy(j => j.SubmittedAt)
-            .ToList();
+        if (this._jobs.TryGetValue(id, out var job))
+        {
+            lock (job)
+            {
+                job.Result = result;
+                job.Status = JobStatus.Completed;
+                job.CompletedAt = DateTimeOffset.UtcNow;
+            }
+        }
     }
 }
