@@ -1,0 +1,184 @@
+{
+  "_type": "export",
+  "__export_format": 4,
+  "__export_date": "2026-03-09T00:00:00.000Z",
+  "__export_source": "meister-propr",
+  "resources": [
+    {
+      "_id": "wrk_meisterpropr",
+      "_type": "workspace",
+      "parentId": null,
+      "name": "MeisterProPR",
+      "description": "MeisterProPR API — client management"
+    },
+    {
+      "_id": "env_meisterpropr_base",
+      "_type": "environment",
+      "parentId": "wrk_meisterpropr",
+      "name": "Local Dev",
+      "data": {
+        "base_url": "https://localhost:5443",
+        "admin_key": "your-admin-key-here",
+        "client_key": "your-client-key-here",
+        "client_id": "00000000-0000-0000-0000-000000000000",
+        "config_id": "00000000-0000-0000-0000-000000000000",
+        "org_url": "https://dev.azure.com/my-org",
+        "display_name": "My Service Principal"
+      }
+    },
+    {
+      "_id": "fld_clients",
+      "_type": "request_group",
+      "parentId": "wrk_meisterpropr",
+      "name": "Clients"
+    },
+    {
+      "_id": "req_clients_register",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Register Client",
+      "method": "POST",
+      "url": "{{ base_url }}/clients",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"key\": \"my-secret-client-key\",\n  \"displayName\": \"My Client\"\n}"
+      }
+    },
+    {
+      "_id": "req_clients_list",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "List Clients",
+      "method": "GET",
+      "url": "{{ base_url }}/clients",
+      "headers": [
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {}
+    },
+    {
+      "_id": "req_clients_get",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Get Client",
+      "method": "GET",
+      "url": "{{ base_url }}/clients/{{ client_id }}",
+      "headers": [
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {}
+    },
+    {
+      "_id": "req_clients_enable",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Enable Client",
+      "method": "PATCH",
+      "url": "{{ base_url }}/clients/{{ client_id }}",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"isActive\": true\n}"
+      }
+    },
+    {
+      "_id": "req_clients_disable",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Disable Client",
+      "method": "PATCH",
+      "url": "{{ base_url }}/clients/{{ client_id }}",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"isActive\": false\n}"
+      }
+    },
+    {
+      "_id": "req_clients_delete",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Delete Client",
+      "method": "DELETE",
+      "url": "{{ base_url }}/clients/{{ client_id }}",
+      "headers": [
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {}
+    },
+    {
+      "_id": "fld_identities",
+      "_type": "request_group",
+      "parentId": "wrk_meisterpropr",
+      "name": "Identities"
+    },
+    {
+      "_id": "req_identities_resolve",
+      "_type": "request",
+      "parentId": "fld_identities",
+      "name": "Resolve Identity",
+      "method": "GET",
+      "url": "{{ base_url }}/identities/resolve?orgUrl={{ org_url }}&displayName={{ display_name }}",
+      "headers": [
+        { "name": "X-Client-Key", "value": "{{ client_key }}" }
+      ],
+      "body": {}
+    },
+    {
+      "_id": "fld_crawl_configs",
+      "_type": "request_group",
+      "parentId": "wrk_meisterpropr",
+      "name": "Crawl Configurations"
+    },
+    {
+      "_id": "req_crawlconfig_add",
+      "_type": "request",
+      "parentId": "fld_crawl_configs",
+      "name": "Add Crawl Configuration",
+      "method": "POST",
+      "url": "{{ base_url }}/clients/{{ client_id }}/crawl-configurations",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Client-Key", "value": "{{ client_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"organizationUrl\": \"{{ org_url }}\",\n  \"projectId\": \"my-project-id\",\n  \"reviewerDisplayName\": \"{{ display_name }}\",\n  \"crawlIntervalSeconds\": 60\n}"
+      }
+    },
+    {
+      "_id": "req_crawlconfig_delete",
+      "_type": "request",
+      "parentId": "fld_crawl_configs",
+      "name": "Delete Crawl Configuration",
+      "method": "DELETE",
+      "url": "{{ base_url }}/clients/{{ client_id }}/crawl-configurations/{{ config_id }}",
+      "headers": [
+        { "name": "X-Client-Key", "value": "{{ client_key }}" }
+      ],
+      "body": {}
+    },
+    {
+      "_id": "req_crawlconfig_list",
+      "_type": "request",
+      "parentId": "fld_crawl_configs",
+      "name": "List Crawl Configurations",
+      "method": "GET",
+      "url": "{{ base_url }}/clients/{{ client_id }}/crawl-configurations",
+      "headers": [
+        { "name": "X-Client-Key", "value": "{{ client_key }}" }
+      ],
+      "body": {}
+    }
+  ]
+}
