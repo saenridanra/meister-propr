@@ -1,21 +1,25 @@
 # Getting Started — Meister ProPR Backend
 
 Meister ProPR is an ASP.NET Core 10 backend that accepts Azure DevOps pull request review
-requests, fetches the changed files using the backend's own Azure identity, runs an AI review
+requests, fetches the changed files using a backend-controlled Azure identity, runs an AI review
 via the **Azure OpenAI Responses API** (reasoning + tool use), and posts the findings back as
 PR thread comments.
+
+Each API client can supply its own Azure service principal credentials so that all ADO operations
+run under that client's identity — or fall back to the global backend identity.
 
 ---
 
 ## Prerequisites
 
-| Requirement                                       | Version            |
-|---------------------------------------------------|--------------------|
-| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.103 or later  |
-| Azure subscription                                | —                  |
-| Azure OpenAI **or** Azure AI Foundry resource     | —                  |
-| Azure DevOps organisation                         | —                  |
-| Docker (optional, for container runs)             | any recent version |
+| Requirement                                       | Version             |
+|---------------------------------------------------|---------------------|
+| [.NET SDK](https://dotnet.microsoft.com/download) | 10.0.103 or later   |
+| Azure subscription                                | —                   |
+| Azure OpenAI **or** Azure AI Foundry resource     | —                   |
+| Azure DevOps organisation                         | —                   |
+| PostgreSQL 17 (or Docker)                         | 17.x                |
+| Docker (optional, for container runs)             | any recent version  |
 
 ---
 
@@ -37,44 +41,68 @@ The backend uses the **Azure OpenAI Responses API** and accepts endpoints from t
 1. Open your AI Foundry project in the portal.
 2. Copy the **project endpoint** shown on the overview page, e.g.
    `https://<resource>.services.ai.azure.com/api/projects/<project>`.
-   The backend strips the project path automatically — only the resource root is used for
-   inference.
 3. Use the **model name** (e.g. `gpt-4o`) as `AI_DEPLOYMENT`.
 
 **Authentication**
 
 By default the backend uses `DefaultAzureCredential` (managed identity / service principal) —
-no API key is needed. Assign the identity the **Cognitive Services OpenAI User** role on the
-resource.
+no API key needed. Assign the identity the **Cognitive Services OpenAI User** role on the resource.
 
 If you prefer API key auth, set `AI_API_KEY`.
 
-### 2 — Azure DevOps permissions
+---
 
-The backend fetches PR content and posts comments using its own Azure identity — the
-`X-Ado-Token` sent by callers is used only to verify the caller's identity and is **never**
-forwarded to Azure DevOps.
+### 2 — Create an Azure service principal (Entra ID app registration)
 
-Grant the identity that will run the backend at least **Contributor** access to the Azure
-DevOps projects whose PRs it will review.
+The backend needs an Azure identity to authenticate against Azure DevOps. You can create a
+dedicated service principal (recommended) or reuse an existing one.
 
-The required ADO resource scope is `499b84ac-1321-427f-aa17-267ca6975798/.default`
-(the Azure DevOps resource ID).
+**In the Azure portal (Entra ID → App registrations):**
 
-### 3 — Identity for local development
+1. Click **New registration**.
+2. Give it a name, e.g. `meister-propr-backend`.
+3. Leave **Redirect URI** blank and click **Register**.
+4. Note the **Application (client) ID** and **Directory (tenant) ID** from the overview page.
+5. Go to **Certificates & secrets → Client secrets → New client secret**.
+6. Give it a description, choose an expiry, and click **Add**.
+7. **Copy the secret value immediately** — it is only shown once.
+8. Add the principal to the organization in Azure Devops
 
-Locally, `DefaultAzureCredential` resolves credentials in this order (among others):
-environment variables → Azure CLI → Visual Studio. The easiest approach is a **service
-principal**:
+---
+
+### 3 — Grant the service principal access in Azure DevOps
+
+The service principal must be a member of each Azure DevOps project it will review PRs for.
+
+1. In Azure DevOps, go to **Project settings → Permissions** (or **Teams**) for your project.
+2. Click **Add** and search for the service principal name or its client ID.
+3. Assign it at least the **Contributor** role so it can read PRs and post comment threads.
+
+Repeat for every project whose PRs the backend will review.
+
+> If you use **per-client credentials** (see [Per-client ADO credentials](#per-client-ado-credentials)
+> below), each client's service principal must be granted access independently.
+
+---
+
+### 4 — Create a PostgreSQL database
+
+The backend stores clients, crawl configurations, and review jobs in PostgreSQL.
+
+**Docker (quickest for local dev):**
 
 ```bash
-az ad sp create-for-rbac --name meister-propr-local --skip-assignment
+docker run -d \
+  --name meister-propr-pg \
+  -e POSTGRES_PASSWORD=devpassword \
+  -e POSTGRES_DB=meisterpropr \
+  -p 5432:5432 \
+  postgres:17-alpine
 ```
 
-Then assign the service principal the roles described in steps 1 and 2.
+Connection string: `Host=localhost;Database=meisterpropr;Username=postgres;Password=devpassword`
 
-For production deployments, use a **managed identity** — no credential environment variables
-are needed.
+EF Core runs migrations automatically on startup — no manual schema setup is needed.
 
 ---
 
@@ -82,23 +110,26 @@ are needed.
 
 ### Required
 
-| Variable              | Description                                                                  |
-|-----------------------|------------------------------------------------------------------------------|
-| `AI_ENDPOINT`         | Azure OpenAI endpoint (`https://…openai.azure.com/`) **or** Azure AI Foundry project URL (`https://….services.ai.azure.com/api/projects/…`) |
-| `AI_DEPLOYMENT`       | Model deployment name, e.g. `gpt-4o` or `o4-mini`                           |
-| `MEISTER_CLIENT_KEYS` | Comma-separated API keys for callers, e.g. `key1,key2`                      |
+| Variable              | Description                                                                   |
+|-----------------------|-------------------------------------------------------------------------------|
+| `AI_ENDPOINT`         | Azure OpenAI endpoint (`https://….openai.azure.com/`) **or** Azure AI Foundry project URL (`https://….services.ai.azure.com/api/projects/…`) |
+| `AI_DEPLOYMENT`       | Model deployment name, e.g. `gpt-4o` or `o4-mini`                            |
+| `MEISTER_ADMIN_KEY`   | Admin API key sent in the `X-Admin-Key` header when managing clients          |
+| `MEISTER_CLIENT_KEYS` | Comma-separated client keys — required when `DB_CONNECTION_STRING` is not set; acts as bootstrap seed when it is set |
 
-The application **will not start** if any required variable is missing or empty.
+The application **will not start** if required variables are missing or empty.
 
 ### Optional
 
 | Variable                    | Description                                                                         |
 |-----------------------------|-------------------------------------------------------------------------------------|
+| `DB_CONNECTION_STRING`      | PostgreSQL connection string. When set, enables DB mode (persisted jobs + client registry). |
+| `PR_CRAWL_INTERVAL_SECONDS` | Polling interval in seconds for the PR crawler background worker (default `60`, minimum `10`). |
 | `AI_API_KEY`                | API key for the AI endpoint. Omit to use `DefaultAzureCredential`.                 |
-| `AZURE_CLIENT_ID`           | Service principal app ID (local dev)                                               |
-| `AZURE_TENANT_ID`           | Azure AD tenant ID (local dev)                                                     |
-| `AZURE_CLIENT_SECRET`       | Service principal secret (local dev — **never commit**)                            |
-| `CORS_ORIGINS`              | Extra comma-separated allowed CORS origins beyond the built-in defaults             |
+| `AZURE_CLIENT_ID`           | Global service principal app ID (`DefaultAzureCredential` env-var chain)           |
+| `AZURE_TENANT_ID`           | Azure AD tenant ID                                                                  |
+| `AZURE_CLIENT_SECRET`       | Global service principal secret (local dev — **never commit**)                     |
+| `CORS_ORIGINS`              | Extra comma-separated allowed CORS origins                                          |
 | `OTLP_ENDPOINT`             | OTLP collector URL for traces, e.g. `http://localhost:4317`                        |
 | `ASPNETCORE_ENVIRONMENT`    | `Development` enables Swagger UI; defaults to `Production`                         |
 
@@ -107,7 +138,7 @@ The application **will not start** if any required variable is missing or empty.
 
 ### Development-only bypasses
 
-Set these via `dotnet user-secrets` (see below). **Never set them in production.**
+Set these via `dotnet user-secrets`. **Never set them in production.**
 
 | Variable                    | Effect                                                                              |
 |-----------------------------|-------------------------------------------------------------------------------------|
@@ -116,10 +147,7 @@ Set these via `dotnet user-secrets` (see below). **Never set them in production.
 
 ---
 
-## Running Locally
-
-The recommended approach for local development is **user secrets** so sensitive values never
-touch environment variables or source control:
+## Running Locally (dotnet)
 
 ```bash
 # Clone and enter the repo
@@ -129,14 +157,16 @@ cd meister-propr
 # Set required config via user secrets
 dotnet user-secrets set "AI_ENDPOINT"         "https://myresource.openai.azure.com/"  --project src/MeisterProPR.Api
 dotnet user-secrets set "AI_DEPLOYMENT"       "gpt-4o"                                --project src/MeisterProPR.Api
+dotnet user-secrets set "MEISTER_ADMIN_KEY"   "my-admin-key"                          --project src/MeisterProPR.Api
 dotnet user-secrets set "MEISTER_CLIENT_KEYS" "my-secret-key"                         --project src/MeisterProPR.Api
+dotnet user-secrets set "DB_CONNECTION_STRING" "Host=localhost;Database=meisterpropr;Username=postgres;Password=devpassword" --project src/MeisterProPR.Api
 
-# Service principal for DefaultAzureCredential (if not using Azure CLI / VS auth)
+# Global service principal for DefaultAzureCredential (if not using Azure CLI / VS auth)
 dotnet user-secrets set "AZURE_CLIENT_ID"     "<appId>"    --project src/MeisterProPR.Api
 dotnet user-secrets set "AZURE_TENANT_ID"     "<tenant>"   --project src/MeisterProPR.Api
 dotnet user-secrets set "AZURE_CLIENT_SECRET" "<password>" --project src/MeisterProPR.Api
 
-# Optional: bypass ADO validation and PR fetching for testbed use
+# Optional: bypass ADO validation and PR fetching for early testing
 dotnet user-secrets set "ADO_SKIP_TOKEN_VALIDATION" "true" --project src/MeisterProPR.Api
 dotnet user-secrets set "ADO_STUB_PR"               "true" --project src/MeisterProPR.Api
 
@@ -144,75 +174,185 @@ dotnet user-secrets set "ADO_STUB_PR"               "true" --project src/Meister
 ASPNETCORE_ENVIRONMENT=Development dotnet run --project src/MeisterProPR.Api
 ```
 
-The API starts on `http://localhost:5000` (or the port shown in the console).
+The API starts on `https://localhost:5443` (HTTPS) and `http://localhost:5080` (HTTP).
 
 Verify it is healthy:
 
 ```bash
-curl http://localhost:5000/healthz
+curl -k https://localhost:5443/healthz
 ```
 
-Expected response when the background worker has started:
+Expected response:
 
 ```json
 {"status":"Healthy","results":{"worker":{"status":"Healthy","description":"Worker is running."}}}
 ```
 
-In `Development` mode, Swagger UI is available at `http://localhost:5000/swagger`.
+In `Development` mode, Swagger UI is available at `https://localhost:5443/swagger`.
 
 ---
 
 ## Running with Docker
 
-A `docker-compose.yml` is provided at the repo root. Create a `.env` file alongside it:
+A `docker-compose.yml` is provided at the repo root. It starts the API and a PostgreSQL 17
+container together.
+
+### Step 1 — Create a `.env` file
+
+Create `.env` at the repo root (next to `docker-compose.yml`):
 
 ```env
-MEISTER_CLIENT_KEYS=my-secret-key
+# --- Admin & client keys ---
+MEISTER_ADMIN_KEY=your-admin-key-here
+MEISTER_CLIENT_KEYS=your-client-key-here
+
+# --- AI ---
 AI_ENDPOINT=https://myresource.openai.azure.com/
 AI_DEPLOYMENT=gpt-4o
-# AI_API_KEY=          # omit to use DefaultAzureCredential
-AZURE_CLIENT_ID=<appId>
-AZURE_TENANT_ID=<tenant>
-AZURE_CLIENT_SECRET=<password>
+# AI_API_KEY=           # omit to use DefaultAzureCredential
+
+# --- Global Azure identity (DefaultAzureCredential env-var chain) ---
+# Used for ADO operations when a client has no per-client credentials configured.
+AZURE_CLIENT_ID=<global-service-principal-appId>
+AZURE_TENANT_ID=<azure-tenant-id>
+AZURE_CLIENT_SECRET=<global-service-principal-secret>
+
+# --- Database ---
+# The docker-compose.yml wires this automatically; override only if using an external DB.
+# DB_CONNECTION_STRING=Host=...
+
+# --- PR crawler ---
+# PR_CRAWL_INTERVAL_SECONDS=60
+
+# --- Observability (optional) ---
+# OTLP_ENDPOINT=http://localhost:4317
 ```
 
-Then start the service:
+> Keep this file out of source control. It is already listed in `.gitignore`.
+
+### Step 2 — Start the stack
 
 ```bash
 docker compose up --build
 ```
 
-The API is available on `http://localhost:8080`. The container runs as a non-root user and
-performs its own health check every 30 seconds.
+The API is available on `https://localhost:5443` (HTTPS) and `http://localhost:8080` (HTTP).
+The container runs as a non-root user and performs its own health check every 30 seconds.
 
-To build and run the image directly:
+### Step 3 — Register your first client
+
+Use the admin API to create a client that callers will authenticate with:
 
 ```bash
-docker build -t meister-propr .
-docker run -p 8080:8080 \
-  -e AI_ENDPOINT="https://myresource.openai.azure.com/" \
-  -e AI_DEPLOYMENT="gpt-4o" \
-  -e MEISTER_CLIENT_KEYS="my-secret-key" \
-  -e AZURE_CLIENT_ID="..." \
-  -e AZURE_TENANT_ID="..." \
-  -e AZURE_CLIENT_SECRET="..." \
-  meister-propr
+curl -k -X POST https://localhost:5443/clients \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your-admin-key-here" \
+  -d '{"key": "my-secret-client-key", "displayName": "My First Client"}'
 ```
+
+Note the returned `id` (a UUID) — you will need it in subsequent steps.
+
+### Step 4 — (Optional) Set per-client ADO credentials
+
+If you want a client to authenticate against Azure DevOps using its **own** service principal
+rather than the global backend identity, store the credentials:
+
+```bash
+curl -k -X PUT https://localhost:5443/clients/<client-id>/ado-credentials \
+  -H "Content-Type: application/json" \
+  -H "X-Admin-Key: your-admin-key-here" \
+  -d '{
+    "tenantId": "<azure-tenant-id>",
+    "clientId": "<service-principal-appId>",
+    "secret":   "<service-principal-secret>"
+  }'
+```
+
+The secret is stored in the database and never returned in API responses.
+
+To remove per-client credentials and revert to the global identity:
+
+```bash
+curl -k -X DELETE https://localhost:5443/clients/<client-id>/ado-credentials \
+  -H "X-Admin-Key: your-admin-key-here"
+```
+
+### Step 5 — Add a crawl configuration
+
+Tell the backend which Azure DevOps project to monitor for PRs assigned to a specific reviewer:
+
+```bash
+curl -k -X POST https://localhost:5443/clients/<client-id>/crawl-configurations \
+  -H "Content-Type: application/json" \
+  -H "X-Client-Key: my-secret-client-key" \
+  -d '{
+    "organizationUrl": "https://dev.azure.com/my-org",
+    "projectId": "my-project-name-or-guid",
+    "reviewerDisplayName": "My Service Principal",
+    "crawlIntervalSeconds": 60
+  }'
+```
+
+`reviewerDisplayName` must match the display name of the Azure DevOps identity (user or service
+principal) whose assigned PRs you want reviewed.
+
+The backend will begin polling for open PRs assigned to that reviewer and submit reviews
+automatically.
+
+---
+
+## Per-Client ADO Credentials
+
+By default all ADO operations use the **global backend identity** configured via
+`AZURE_CLIENT_ID` / `AZURE_TENANT_ID` / `AZURE_CLIENT_SECRET` (or a managed identity in
+production). This works well when all clients belong to the same Azure DevOps organisation and
+the same service principal has been granted access.
+
+When clients belong to **different organisations or tenants**, or when you want isolation between
+clients, each client can have its own Azure service principal:
+
+1. **Create a service principal** in Entra ID for each client (see
+   [Azure Setup — step 2](#2--create-an-azure-service-principal-entra-id-app-registration)).
+2. **Grant it access** to the relevant Azure DevOps projects (see
+   [Azure Setup — step 3](#3--grant-the-service-principal-access-in-azure-devops)).
+3. **Store the credentials** via `PUT /clients/{id}/ado-credentials` (see
+   [Step 4](#step-4--optional-set-per-client-ado-credentials) above).
+
+The `GET /clients` and `GET /clients/{id}` responses include `hasAdoCredentials`,
+`adoTenantId`, and `adoClientId` — the secret is never returned.
+
+---
+
+## Client Management API
+
+All client management endpoints require the `X-Admin-Key` header.
+
+| Method   | Path                                         | Description                                 |
+|----------|----------------------------------------------|---------------------------------------------|
+| `POST`   | `/clients`                                   | Register a new client                       |
+| `GET`    | `/clients`                                   | List all clients                            |
+| `GET`    | `/clients/{id}`                              | Get a single client                         |
+| `PATCH`  | `/clients/{id}`                              | Enable or disable a client                  |
+| `DELETE` | `/clients/{id}`                              | Delete a client                             |
+| `PUT`    | `/clients/{id}/ado-credentials`              | Set (or replace) per-client ADO credentials |
+| `DELETE` | `/clients/{id}/ado-credentials`              | Clear per-client ADO credentials            |
+| `POST`   | `/clients/{id}/crawl-configurations`         | Add a crawl configuration                   |
+| `GET`    | `/clients/{id}/crawl-configurations`         | List crawl configurations for a client      |
+| `DELETE` | `/clients/{id}/crawl-configurations/{cfgId}` | Remove a crawl configuration                |
 
 ---
 
 ## API Usage
 
-All requests require an `X-Client-Key` header matching one of the values in
-`MEISTER_CLIENT_KEYS`. Review endpoints also require an `X-Ado-Token` header containing a
-valid Azure DevOps personal access token (PAT) or OAuth token — this token is used only to
-verify the caller's identity and is **not** used to fetch PR data.
+Review endpoints require both `X-Client-Key` (from `MEISTER_CLIENT_KEYS` or the client
+registry) and `X-Ado-Token` (a valid ADO PAT or OAuth token used only for caller identity
+verification).
 
 ### Submit a review
 
 ```bash
-curl -X POST http://localhost:5000/reviews \
-  -H "X-Client-Key: my-secret-key" \
+curl -k -X POST https://localhost:5443/reviews \
+  -H "X-Client-Key: my-secret-client-key" \
   -H "X-Ado-Token: <your-ado-pat>" \
   -H "Content-Type: application/json" \
   -d '{
@@ -236,8 +376,8 @@ Submitting the same PR and iteration while a job is still active returns the **s
 ### Poll for the result
 
 ```bash
-curl http://localhost:5000/reviews/3fa85f64-5717-4562-b3fc-2c963f66afa6 \
-  -H "X-Client-Key: my-secret-key" \
+curl -k https://localhost:5443/reviews/3fa85f64-5717-4562-b3fc-2c963f66afa6 \
+  -H "X-Client-Key: my-secret-client-key" \
   -H "X-Ado-Token: <your-ado-pat>"
 ```
 
@@ -247,8 +387,8 @@ While processing, `status` is `"pending"` or `"processing"`. When done:
 {
   "jobId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
   "status": "completed",
-  "submittedAt": "2026-03-03T10:00:00Z",
-  "completedAt": "2026-03-03T10:00:45Z",
+  "submittedAt": "2026-03-09T10:00:00Z",
+  "completedAt": "2026-03-09T10:00:45Z",
   "result": {
     "summary": "Overall the PR looks good. One potential issue found.",
     "comments": [
@@ -262,18 +402,6 @@ While processing, `status` is `"pending"` or `"processing"`. When done:
   }
 }
 ```
-
-If the job failed, `status` is `"failed"` and an `error` string is included.
-
-### List reviews
-
-```bash
-curl http://localhost:5000/reviews \
-  -H "X-Client-Key: my-secret-key" \
-  -H "X-Ado-Token: <your-ado-pat>"
-```
-
-Returns all jobs submitted by this client key, newest first.
 
 ---
 
@@ -294,8 +422,10 @@ Returns all jobs submitted by this client key, newest first.
 dotnet test
 ```
 
-All 141 tests across four projects should pass without any additional setup — the API
-integration tests use `WebApplicationFactory` with fake credentials and in-memory stubs.
+235 tests across four projects should pass without additional setup. The API integration tests
+use `WebApplicationFactory` with fake credentials and in-memory stubs. Infrastructure
+integration tests spin up a real PostgreSQL 17 container automatically via Testcontainers
+(Docker or Podman required).
 
 ---
 
@@ -311,17 +441,35 @@ ClientKeyMiddleware  ←── validates X-Client-Key
 ReviewsController    ←── validates X-Ado-Token (identity check only)
      │  returns 202 + jobId immediately
      ▼
-InMemoryJobRepository  (ConcurrentDictionary, lost on restart)
+PostgresJobRepository  (persisted in PostgreSQL)
      │
      ▼ (every 2 seconds)
 ReviewJobWorker (BackgroundService)
      │
      ▼
 ReviewOrchestrationService
-     ├── AdoPullRequestFetcher  ──► Azure DevOps           (DefaultAzureCredential)
+     ├── AdoPullRequestFetcher  ──► Azure DevOps  (per-client or global identity)
      ├── AgentAiReviewCore      ──► Azure OpenAI / Foundry (Responses API)
-     └── AdoCommentPoster       ──► Azure DevOps           (DefaultAzureCredential)
+     └── AdoCommentPoster       ──► Azure DevOps  (per-client or global identity)
+
+Admin API (/clients, /clients/{id}/ado-credentials, …)
+     │  X-Admin-Key
+     ▼
+ClientsController
+     ├── IClientRegistry            (PostgreSQL)
+     └── IClientAdoCredentialRepository  (PostgreSQL — secret stored, never returned)
 ```
 
-**State is in-memory.** Restarting the process loses all pending and completed jobs.
-A future persistence layer can be added by implementing `IJobRepository`.
+**Per-client identity resolution:**
+
+```
+IClientAdoCredentialRepository.GetByClientIdAsync(clientId)
+     │
+     ├── credentials found  →  ClientSecretCredential(tenantId, clientId, secret)
+     │                                │
+     │                                └──► VssConnection  (client-scoped cache)
+     │
+     └── no credentials     →  DefaultAzureCredential  (global backend identity)
+                                        │
+                                        └──► VssConnection  (global cache)
+```

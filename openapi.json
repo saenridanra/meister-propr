@@ -5,6 +5,237 @@
     "version": "1.0"
   },
   "paths": {
+    "/clients/{clientId}/crawl-configurations": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Adds a crawl configuration for the specified client. Requires `X-Client-Key` that owns the client.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Crawl configuration details.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Configuration created.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Client-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this client.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Lists crawl configurations for the specified client. Requires `X-Client-Key` that owns the client.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of crawl configurations.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrawlConfigResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrawlConfigResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrawlConfigResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Client-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this client.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/clients": {
       "post": {
         "tags": [
@@ -253,6 +484,69 @@
           }
         }
       },
+      "delete": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Deletes a client and all its crawl configurations. Requires `X-Admin-Key`.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Client deleted."
+          },
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
       "patch": {
         "tags": [
           "Clients"
@@ -354,12 +648,12 @@
         }
       }
     },
-    "/clients/{clientId}/crawl-configurations": {
-      "post": {
+    "/clients/{clientId}/ado-credentials": {
+      "put": {
         "tags": [
           "Clients"
         ],
-        "summary": "Adds a crawl configuration for the specified client. Requires `X-Client-Key` that owns the client.",
+        "summary": "Sets or replaces ADO service principal credentials for a client. Requires `X-Admin-Key`.",
         "parameters": [
           {
             "name": "clientId",
@@ -373,48 +667,51 @@
           }
         ],
         "requestBody": {
-          "description": "Crawl configuration details.",
+          "description": "ADO credential details — all three fields required.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+                "$ref": "#/components/schemas/SetAdoCredentialsRequest"
               }
             },
             "text/json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+                "$ref": "#/components/schemas/SetAdoCredentialsRequest"
               }
             },
             "application/*+json": {
               "schema": {
-                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+                "$ref": "#/components/schemas/SetAdoCredentialsRequest"
               }
             }
           }
         },
         "responses": {
-          "201": {
-            "description": "Configuration created.",
+          "204": {
+            "description": "Credentials stored."
+          },
+          "400": {
+            "description": "One or more fields are missing or blank.",
             "content": {
               "text/plain": {
                 "schema": {
-                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               },
               "text/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
-          "400": {
-            "description": "Validation failure.",
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key`.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -432,6 +729,124 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Removes ADO service principal credentials from a client. Requires `X-Admin-Key`.\r\nThe client falls back to the global backend identity on subsequent ADO operations.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Credentials removed (or client had no credentials — idempotent)."
+          },
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients/{clientId}/crawl-configurations/{configId}": {
+      "delete": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Deletes a crawl configuration. Requires `X-Client-Key` that owns the client.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "configId",
+            "in": "path",
+            "description": "Configuration identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Configuration deleted."
           },
           "401": {
             "description": "Missing or invalid `X-Client-Key`.",
@@ -474,7 +889,7 @@
             }
           },
           "404": {
-            "description": "Client not found.",
+            "description": "Configuration not found.",
             "content": {
               "text/plain": {
                 "schema": {
@@ -495,97 +910,6 @@
           }
         }
       },
-      "get": {
-        "tags": [
-          "Clients"
-        ],
-        "summary": "Lists crawl configurations for the specified client. Requires `X-Client-Key` that owns the client.",
-        "parameters": [
-          {
-            "name": "clientId",
-            "in": "path",
-            "description": "Client identifier.",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of crawl configurations.",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CrawlConfigResponse"
-                  }
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CrawlConfigResponse"
-                  }
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/CrawlConfigResponse"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Missing or invalid `X-Client-Key`.",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "Caller does not own this client.",
-            "content": {
-              "text/plain": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              },
-              "text/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/clients/{clientId}/crawl-configurations/{configId}": {
       "patch": {
         "tags": [
           "Clients"
@@ -717,6 +1041,103 @@
         }
       }
     },
+    "/identities/resolve": {
+      "get": {
+        "tags": [
+          "Identities"
+        ],
+        "summary": "Resolves ADO identities matching the given display name within an organisation.\r\nReturns the VSS identity GUID required for the `reviewerId` field of a crawl\r\nconfiguration.  Works for users, service principals, and managed identities.\r\nRequires `X-Client-Key`.",
+        "parameters": [
+          {
+            "name": "orgUrl",
+            "in": "query",
+            "description": "Azure DevOps organisation URL (e.g. `https://dev.azure.com/my-org`).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "displayName",
+            "in": "query",
+            "description": "Display name of the identity to search for.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "One or more matching identities.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/IdentityResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Missing required query parameters.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "No identity found with that display name.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/jobs": {
       "get": {
         "tags": [
@@ -813,6 +1234,14 @@
             }
           },
           {
+            "name": "X-Ado-Org-Url",
+            "in": "header",
+            "description": "ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
             "name": "jobId",
             "in": "path",
             "description": "The job identifier returned from POST /reviews.",
@@ -898,6 +1327,14 @@
             "name": "X-Ado-Token",
             "in": "header",
             "description": "ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "X-Ado-Org-Url",
+            "in": "header",
+            "description": "ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs.",
             "schema": {
               "type": "string"
             }
@@ -1074,10 +1511,21 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "hasAdoCredentials": {
+            "type": "boolean"
+          },
+          "adoTenantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "adoClientId": {
+            "type": "string",
+            "nullable": true
           }
         },
         "additionalProperties": false,
-        "description": "Client response (key is never included)."
+        "description": "Client response — key and ADO secret are never included."
       },
       "CommentSeverity": {
         "enum": [
@@ -1153,9 +1601,9 @@
             "type": "string",
             "nullable": true
           },
-          "reviewerId": {
+          "reviewerDisplayName": {
             "type": "string",
-            "format": "uuid"
+            "nullable": true
           },
           "crawlIntervalSeconds": {
             "type": "integer",
@@ -1164,6 +1612,23 @@
         },
         "additionalProperties": false,
         "description": "Request body for creating a crawl configuration."
+      },
+      "IdentityResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "VSS identity GUID — use as `reviewerId` in crawl configurations.",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "description": "Human-readable display name.",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Resolved ADO identity."
       },
       "JobListItem": {
         "type": "object",
@@ -1299,7 +1764,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": {}
+        "additionalProperties": { }
       },
       "ReviewCommentDto": {
         "type": "object",
@@ -1472,12 +1937,34 @@
         },
         "additionalProperties": false,
         "description": "Detailed status response for a review job."
+      },
+      "SetAdoCredentialsRequest": {
+        "type": "object",
+        "properties": {
+          "tenantId": {
+            "type": "string",
+            "nullable": true
+          },
+          "clientId": {
+            "type": "string",
+            "nullable": true
+          },
+          "secret": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request body for setting ADO service principal credentials."
       }
     }
   },
   "tags": [
     {
       "name": "Clients"
+    },
+    {
+      "name": "Identities"
     },
     {
       "name": "Jobs"

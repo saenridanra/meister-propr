@@ -71,12 +71,14 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IJobRepository, PostgresJobRepository>();
             services.AddScoped<IClientRegistry, PostgresClientRegistry>();
             services.AddScoped<ICrawlConfigurationRepository, PostgresCrawlConfigurationRepository>();
+            services.AddScoped<IClientAdoCredentialRepository, PostgresClientAdoCredentialRepository>();
         }
         else
         {
             // Legacy in-memory mode (dev / WebApplicationFactory tests without DB)
             services.AddSingleton<IJobRepository, InMemoryJobRepository>();
             services.AddSingleton<IClientRegistry, EnvVarClientRegistry>();
+            services.AddSingleton<IClientAdoCredentialRepository, NullClientAdoCredentialRepository>();
         }
 
         // ADO token validation (identity verification only).
@@ -117,7 +119,10 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IAssignedPullRequestFetcher, AdoAssignedPrFetcher>();
             services.AddHttpClient("AdoIdentity");
             services.AddScoped<IIdentityResolver>(sp =>
-                new AdoIdentityResolver(credential, sp.GetRequiredService<IHttpClientFactory>()));
+                new AdoIdentityResolver(
+                    credential,
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    sp.GetRequiredService<IClientAdoCredentialRepository>()));
         }
 
         // AI review (provider-agnostic via IChatClient)

@@ -31,6 +31,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<string>(),
                 Arg.Any<int>(),
                 Arg.Any<int>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Returns(pr);
         aiCore.ReviewAsync(Arg.Any<PullRequest>(), Arg.Any<CancellationToken>())
@@ -66,6 +67,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<string>(),
                 Arg.Any<int>(),
                 Arg.Any<int>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Returns(pr);
         aiCore.ReviewAsync(Arg.Any<PullRequest>(), Arg.Any<CancellationToken>())
@@ -77,6 +79,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<int>(),
                 Arg.Any<int>(),
                 Arg.Any<ReviewResult>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Throws(new Exception("Comment post error"));
 
@@ -106,6 +109,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<string>(),
                 Arg.Any<int>(),
                 Arg.Any<int>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Throws(new Exception("ADO fetch error"));
 
@@ -142,6 +146,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<string>(),
                 Arg.Any<int>(),
                 Arg.Any<int>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Returns(closedPr);
 
@@ -175,6 +180,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<string>(),
                 Arg.Any<int>(),
                 Arg.Any<int>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Returns(pr);
         aiCore.ReviewAsync(Arg.Any<PullRequest>(), Arg.Any<CancellationToken>())
@@ -194,6 +200,7 @@ public class ReviewOrchestrationServiceTests
                 job.PullRequestId,
                 job.IterationId,
                 result,
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>());
     }
 
@@ -217,6 +224,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<string>(),
                 Arg.Any<int>(),
                 Arg.Any<int>(),
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>())
             .Returns(pr);
         aiCore.ReviewAsync(Arg.Any<PullRequest>(), Arg.Any<CancellationToken>())
@@ -237,6 +245,7 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<int>(),
                 Arg.Any<int>(),
                 result,
+                Arg.Any<Guid?>(),
                 Arg.Any<CancellationToken>());
         jobs.DidNotReceive().SetFailed(Arg.Any<Guid>(), Arg.Any<string>());
     }

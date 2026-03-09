@@ -5,7 +5,9 @@ using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace MeisterProPR.Infrastructure.AzureDevOps;
 
-public sealed class AdoCommentPoster(VssConnectionFactory connectionFactory) : IAdoCommentPoster
+public sealed class AdoCommentPoster(
+    VssConnectionFactory connectionFactory,
+    IClientAdoCredentialRepository credentialRepository) : IAdoCommentPoster
 {
     public async Task PostAsync(
         string organizationUrl,
@@ -14,9 +16,13 @@ public sealed class AdoCommentPoster(VssConnectionFactory connectionFactory) : I
         int pullRequestId,
         int iterationId,
         ReviewResult result,
+        Guid? clientId = null,
         CancellationToken cancellationToken = default)
     {
-        var connection = await connectionFactory.GetConnectionAsync(organizationUrl, cancellationToken);
+        var credentials = clientId.HasValue
+            ? await credentialRepository.GetByClientIdAsync(clientId.Value, cancellationToken)
+            : null;
+        var connection = await connectionFactory.GetConnectionAsync(organizationUrl, credentials, cancellationToken);
         var gitClient = connection.GetClient<GitHttpClient>();
 
         // Build a map of normalised file path → changeTrackingId for inline comment anchoring.

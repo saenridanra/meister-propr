@@ -37,35 +37,35 @@ No new NuGet packages, projects, or frameworks required. All dependencies (`Azur
 
 > **NOTE: Write these tests FIRST so they exist as failing stubs before implementation begins**
 
-- [ ] T001 [P] [TEST] Write failing test class `NullClientAdoCredentialRepositoryTests` asserting `GetByClientIdAsync` always returns null and `UpsertAsync`/`ClearAsync` are no-ops in `tests/MeisterProPR.Infrastructure.Tests/Repositories/NullClientAdoCredentialRepositoryTests.cs`
-- [ ] T002 [P] [TEST] Write failing test class `PostgresClientAdoCredentialRepositoryTests` with tests for `UpsertAsync` (creates row), `GetByClientIdAsync` (returns stored credentials), `UpsertAsync` again (updates existing row, not duplicate insert), and `ClearAsync` (nulls all three columns) in `tests/MeisterProPR.Infrastructure.Tests/Repositories/PostgresClientAdoCredentialRepositoryTests.cs`
-- [ ] T003 [P] [TEST] Write failing tests for `VssConnectionFactory.GetConnectionAsync` with `ClientAdoCredentials?` parameter: (a) non-null credentials builds `ClientSecretCredential` path; (b) null credentials falls back to global `TokenCredential`; (c) cache key distinguishes `orgUrl::clientId` from `orgUrl::global` in `tests/MeisterProPR.Infrastructure.Tests/AzureDevOps/VssConnectionFactoryTests.cs`
+- [X] T001 [P] [TEST] Write failing test class `NullClientAdoCredentialRepositoryTests` asserting `GetByClientIdAsync` always returns null and `UpsertAsync`/`ClearAsync` are no-ops in `tests/MeisterProPR.Infrastructure.Tests/Repositories/NullClientAdoCredentialRepositoryTests.cs`
+- [X] T002 [P] [TEST] Write failing test class `PostgresClientAdoCredentialRepositoryTests` with tests for `UpsertAsync` (creates row), `GetByClientIdAsync` (returns stored credentials), `UpsertAsync` again (updates existing row, not duplicate insert), and `ClearAsync` (nulls all three columns) in `tests/MeisterProPR.Infrastructure.Tests/Repositories/PostgresClientAdoCredentialRepositoryTests.cs`
+- [X] T003 [P] [TEST] Write failing tests for `VssConnectionFactory.GetConnectionAsync` with `ClientAdoCredentials?` parameter: (a) non-null credentials builds `ClientSecretCredential` path; (b) null credentials falls back to global `TokenCredential`; (c) cache key distinguishes `orgUrl::clientId` from `orgUrl::global` in `tests/MeisterProPR.Infrastructure.Tests/AzureDevOps/VssConnectionFactoryTests.cs`
 
 ### Application Layer Changes
 
-- [ ] T004 [P] Create `ClientAdoCredentials` sealed record with properties `TenantId`, `ClientId`, `Secret` (all `string`, no Azure dependencies) in `src/MeisterProPR.Application/DTOs/ClientAdoCredentials.cs`
-- [ ] T005 [P] Create `IClientAdoCredentialRepository` interface with three methods — `Task<ClientAdoCredentials?> GetByClientIdAsync(Guid clientId, CancellationToken ct)`, `Task UpsertAsync(Guid clientId, ClientAdoCredentials credentials, CancellationToken ct)`, `Task ClearAsync(Guid clientId, CancellationToken ct)` — in `src/MeisterProPR.Application/Interfaces/IClientAdoCredentialRepository.cs`
-- [ ] T006 Update `IIdentityResolver.ResolveAsync` signature to add `Guid clientId` as the third parameter (before `CancellationToken`) in `src/MeisterProPR.Application/Interfaces/IIdentityResolver.cs`
-- [ ] T007 Update `StubIdentityResolver.ResolveAsync` to match the new 4-parameter signature (add ignored `Guid clientId` parameter) in `src/MeisterProPR.Infrastructure/AzureDevOps/StubIdentityResolver.cs`
-- [ ] T008 Fix all existing `IIdentityResolver` mock setups and usages in test projects to use the new 4-parameter signature — search for `ResolveAsync` in `tests/` and update every call site in `tests/MeisterProPR.Api.Tests/`
+- [X] T004 [P] Create `ClientAdoCredentials` sealed record with properties `TenantId`, `ClientId`, `Secret` (all `string`, no Azure dependencies) in `src/MeisterProPR.Application/DTOs/ClientAdoCredentials.cs`
+- [X] T005 [P] Create `IClientAdoCredentialRepository` interface with three methods — `Task<ClientAdoCredentials?> GetByClientIdAsync(Guid clientId, CancellationToken ct)`, `Task UpsertAsync(Guid clientId, ClientAdoCredentials credentials, CancellationToken ct)`, `Task ClearAsync(Guid clientId, CancellationToken ct)` — in `src/MeisterProPR.Application/Interfaces/IClientAdoCredentialRepository.cs`
+- [X] T006 Update `IIdentityResolver.ResolveAsync` signature to add `Guid clientId` as the third parameter (before `CancellationToken`) in `src/MeisterProPR.Application/Interfaces/IIdentityResolver.cs`
+- [X] T007 Update `StubIdentityResolver.ResolveAsync` to match the new 4-parameter signature (add ignored `Guid clientId` parameter) in `src/MeisterProPR.Infrastructure/AzureDevOps/StubIdentityResolver.cs`
+- [X] T008 Fix all existing `IIdentityResolver` mock setups and usages in test projects to use the new 4-parameter signature — search for `ResolveAsync` in `tests/` and update every call site in `tests/MeisterProPR.Api.Tests/`
 
 ### DB Model and Migration
 
-- [ ] T009 Add three nullable `string?` auto-properties to `ClientRecord`: `AdoTenantId`, `AdoClientId`, `AdoClientSecret` in `src/MeisterProPR.Infrastructure/Data/Models/ClientRecord.cs`
-- [ ] T010 Map the three new nullable properties to columns `ado_tenant_id`, `ado_client_id`, `ado_client_secret` (all `text`, nullable) in `src/MeisterProPR.Infrastructure/Data/Configurations/ClientEntityTypeConfiguration.cs`
-- [ ] T011 Generate EF Core migration by running `dotnet ef migrations add AddClientAdoCredentials --project src/MeisterProPR.Infrastructure --startup-project src/MeisterProPR.Api` and verify the generated `Up`/`Down` methods add/drop the three columns on the `clients` table
+- [X] T009 Add three nullable `string?` auto-properties to `ClientRecord`: `AdoTenantId`, `AdoClientId`, `AdoClientSecret` in `src/MeisterProPR.Infrastructure/Data/Models/ClientRecord.cs`
+- [X] T010 Map the three new nullable properties to columns `ado_tenant_id`, `ado_client_id`, `ado_client_secret` (all `text`, nullable) in `src/MeisterProPR.Infrastructure/Data/Configurations/ClientEntityTypeConfiguration.cs`
+- [X] T011 Generate EF Core migration by running `dotnet ef migrations add AddClientAdoCredentials --project src/MeisterProPR.Infrastructure --startup-project src/MeisterProPR.Api` and verify the generated `Up`/`Down` methods add/drop the three columns on the `clients` table
 
 ### Infrastructure Implementations
 
-- [ ] T012 [P] Create `NullClientAdoCredentialRepository` implementing `IClientAdoCredentialRepository`: `GetByClientIdAsync` returns `null`; `UpsertAsync` and `ClearAsync` are no-ops in `src/MeisterProPR.Infrastructure/Repositories/NullClientAdoCredentialRepository.cs`
-- [ ] T013 Create `PostgresClientAdoCredentialRepository` implementing `IClientAdoCredentialRepository` via EF Core `MeisterProPRDbContext`: `GetByClientIdAsync` reads the three columns from `ClientRecord` and returns a `ClientAdoCredentials` if all three non-null; `UpsertAsync` finds the record by primary key and sets all three columns; `ClearAsync` nulls all three columns — all changes via `SaveChangesAsync` in `src/MeisterProPR.Infrastructure/Repositories/PostgresClientAdoCredentialRepository.cs`
-- [ ] T014 Update `VssConnectionFactory`: change `GetConnectionAsync` signature to accept `ClientAdoCredentials? credentials` as second parameter; resolve `ClientSecretCredential(credentials.TenantId, credentials.ClientId, credentials.Secret)` when `credentials != null`, else use the existing global `TokenCredential`; change the cache key from `orgUrl` to `$"{orgUrl}::{credentials?.ClientId ?? "global"}"` in `src/MeisterProPR.Infrastructure/AzureDevOps/VssConnectionFactory.cs`
-- [ ] T015 Update `AdoIdentityResolver` to inject `IClientAdoCredentialRepository`; in `ResolveAsync` call `GetByClientIdAsync(clientId, ct)`, convert the returned `ClientAdoCredentials?` to a `TokenCredential` (`ClientSecretCredential` when non-null, global credential when null), and use that credential to obtain the Bearer token in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoIdentityResolver.cs`
+- [X] T012 [P] Create `NullClientAdoCredentialRepository` implementing `IClientAdoCredentialRepository`: `GetByClientIdAsync` returns `null`; `UpsertAsync` and `ClearAsync` are no-ops in `src/MeisterProPR.Infrastructure/Repositories/NullClientAdoCredentialRepository.cs`
+- [X] T013 Create `PostgresClientAdoCredentialRepository` implementing `IClientAdoCredentialRepository` via EF Core `MeisterProPRDbContext`: `GetByClientIdAsync` reads the three columns from `ClientRecord` and returns a `ClientAdoCredentials` if all three non-null; `UpsertAsync` finds the record by primary key and sets all three columns; `ClearAsync` nulls all three columns — all changes via `SaveChangesAsync` in `src/MeisterProPR.Infrastructure/Repositories/PostgresClientAdoCredentialRepository.cs`
+- [X] T014 Update `VssConnectionFactory`: change `GetConnectionAsync` signature to accept `ClientAdoCredentials? credentials` as second parameter; resolve `ClientSecretCredential(credentials.TenantId, credentials.ClientId, credentials.Secret)` when `credentials != null`, else use the existing global `TokenCredential`; change the cache key from `orgUrl` to `$"{orgUrl}::{credentials?.ClientId ?? "global"}"` in `src/MeisterProPR.Infrastructure/AzureDevOps/VssConnectionFactory.cs`
+- [X] T015 Update `AdoIdentityResolver` to inject `IClientAdoCredentialRepository`; in `ResolveAsync` call `GetByClientIdAsync(clientId, ct)`, convert the returned `ClientAdoCredentials?` to a `TokenCredential` (`ClientSecretCredential` when non-null, global credential when null), and use that credential to obtain the Bearer token in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoIdentityResolver.cs`
 
 ### DI Registration and Observability
 
-- [ ] T016 Register `IClientAdoCredentialRepository`: in DB mode register `PostgresClientAdoCredentialRepository` (scoped); in legacy mode register `NullClientAdoCredentialRepository` (singleton) in `src/MeisterProPR.Infrastructure/DependencyInjection/InfrastructureServiceExtensions.cs`
-- [ ] T017 Add `"AdoClientSecret"` to the Serilog destructuring-policy scrub list alongside the existing `X-Client-Key`, `X-Ado-Token`, and `AZURE_CLIENT_SECRET` entries in `src/MeisterProPR.Api/Program.cs`
+- [X] T016 Register `IClientAdoCredentialRepository`: in DB mode register `PostgresClientAdoCredentialRepository` (scoped); in legacy mode register `NullClientAdoCredentialRepository` (singleton) in `src/MeisterProPR.Infrastructure/DependencyInjection/InfrastructureServiceExtensions.cs`
+- [X] T017 Add `"AdoClientSecret"` to the Serilog destructuring-policy scrub list alongside the existing `X-Client-Key`, `X-Ado-Token`, and `AZURE_CLIENT_SECRET` entries in `src/MeisterProPR.Api/Program.cs`
 
 **Checkpoint**: Foundation is complete. All three new repository implementations exist, the factory accepts per-call credentials, and the identity resolver is credential-aware. User story phases can now begin.
 
@@ -81,20 +81,20 @@ No new NuGet packages, projects, or frameworks required. All dependencies (`Azur
 
 > **Write these FIRST — confirm they FAIL before implementation**
 
-- [ ] T018 [P] [US1] [TEST] Write failing integration test for `PUT /clients/{clientId}/ado-credentials` returning `204 No Content` when all three fields supplied, `400` when any field is missing or blank, `401` when no `X-Admin-Key`, and `404` when client does not exist in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
-- [ ] T019 [P] [US1] [TEST] Write failing unit test for `AdoAssignedPrFetcher`: given `IClientAdoCredentialRepository` returns `ClientAdoCredentials`, `GetConnectionAsync` is called with those credentials (not null); given repository returns null, `GetConnectionAsync` is called with null in `tests/MeisterProPR.Infrastructure.Tests/AzureDevOps/AdoAssignedPrFetcherTests.cs`
-- [ ] T020 [P] [US1] [TEST] Write failing unit test for `AdoIdentityResolver.ResolveAsync`: given `IClientAdoCredentialRepository` returns credentials for `clientId`, the outgoing Bearer token is obtained from a `ClientSecretCredential` (not the global credential) in `tests/MeisterProPR.Infrastructure.Tests/AzureDevOps/AdoIdentityResolverTests.cs`
+- [X] T018 [P] [US1] [TEST] Write failing integration test for `PUT /clients/{clientId}/ado-credentials` returning `204 No Content` when all three fields supplied, `400` when any field is missing or blank, `401` when no `X-Admin-Key`, and `404` when client does not exist in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
+- [X] T019 [P] [US1] [TEST] Write failing unit test for `AdoAssignedPrFetcher`: given `IClientAdoCredentialRepository` returns `ClientAdoCredentials`, `GetConnectionAsync` is called with those credentials (not null); given repository returns null, `GetConnectionAsync` is called with null in `tests/MeisterProPR.Infrastructure.Tests/AzureDevOps/AdoAssignedPrFetcherTests.cs`
+- [X] T020 [P] [US1] [TEST] Write failing unit test for `AdoIdentityResolver.ResolveAsync`: given `IClientAdoCredentialRepository` returns credentials for `clientId`, the outgoing Bearer token is obtained from a `ClientSecretCredential` (not the global credential) in `tests/MeisterProPR.Infrastructure.Tests/AzureDevOps/AdoIdentityResolverTests.cs`
 
 ### Implementation for User Story 1
 
-- [ ] T021 [US1] Update `ClientResponse` sealed record to add `bool HasAdoCredentials`, `string? AdoTenantId`, `string? AdoClientId` — no Secret field must be present in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
-- [ ] T022 [US1] Add `SetAdoCredentialsRequest` sealed record with `string TenantId`, `string ClientId`, `string Secret` (all required, no nullability) in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
-- [ ] T023 [US1] Add `PutAdoCredentials` action: `[HttpPut("clients/{clientId:guid}/ado-credentials")]`, `X-Admin-Key` guard, validate all three fields are non-blank (return `400` if any missing), verify client exists (return `404` if not), call `IClientAdoCredentialRepository.UpsertAsync`, return `204 No Content` — include full XML doc comments in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
-- [ ] T024 [US1] Update all existing `ClientResponse(...)` construction sites in `CreateClient`, `GetClient`, `GetClients`, and `PatchClient` to populate `HasAdoCredentials`, `AdoTenantId`, `AdoClientId` from the loaded `ClientRecord` in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
-- [ ] T025 [US1] Update `ClientsController.AddCrawlConfiguration` to pass `clientId` as the third argument to `identityResolver.ResolveAsync(request.OrganizationUrl, request.ReviewerDisplayName, clientId, ct)` in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
-- [ ] T026 [US1] Inject `IClientAdoCredentialRepository` into `AdoAssignedPrFetcher`; before calling `connectionFactory.GetConnectionAsync(config.OrganizationUrl, ...)`, call `await credentialRepo.GetByClientIdAsync(config.ClientId, ct)` and pass the result as the second argument in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoAssignedPrFetcher.cs`
-- [ ] T027 [P] [US1] Inject `IClientAdoCredentialRepository` into `AdoPullRequestFetcher`; resolve per-client credentials before each `GetConnectionAsync` call using `config.ClientId` in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoPullRequestFetcher.cs`
-- [ ] T028 [P] [US1] Inject `IClientAdoCredentialRepository` into `AdoCommentPoster`; resolve per-client credentials before each `GetConnectionAsync` call using `config.ClientId` in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoCommentPoster.cs`
+- [X] T021 [US1] Update `ClientResponse` sealed record to add `bool HasAdoCredentials`, `string? AdoTenantId`, `string? AdoClientId` — no Secret field must be present in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T022 [US1] Add `SetAdoCredentialsRequest` sealed record with `string TenantId`, `string ClientId`, `string Secret` (all required, no nullability) in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T023 [US1] Add `PutAdoCredentials` action: `[HttpPut("clients/{clientId:guid}/ado-credentials")]`, `X-Admin-Key` guard, validate all three fields are non-blank (return `400` if any missing), verify client exists (return `404` if not), call `IClientAdoCredentialRepository.UpsertAsync`, return `204 No Content` — include full XML doc comments in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T024 [US1] Update all existing `ClientResponse(...)` construction sites in `CreateClient`, `GetClient`, `GetClients`, and `PatchClient` to populate `HasAdoCredentials`, `AdoTenantId`, `AdoClientId` from the loaded `ClientRecord` in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T025 [US1] Update `ClientsController.AddCrawlConfiguration` to pass `clientId` as the third argument to `identityResolver.ResolveAsync(request.OrganizationUrl, request.ReviewerDisplayName, clientId, ct)` in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T026 [US1] Inject `IClientAdoCredentialRepository` into `AdoAssignedPrFetcher`; before calling `connectionFactory.GetConnectionAsync(config.OrganizationUrl, ...)`, call `await credentialRepo.GetByClientIdAsync(config.ClientId, ct)` and pass the result as the second argument in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoAssignedPrFetcher.cs`
+- [X] T027 [P] [US1] Inject `IClientAdoCredentialRepository` into `AdoPullRequestFetcher`; resolve per-client credentials before each `GetConnectionAsync` call using `config.ClientId` in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoPullRequestFetcher.cs`
+- [X] T028 [P] [US1] Inject `IClientAdoCredentialRepository` into `AdoCommentPoster`; resolve per-client credentials before each `GetConnectionAsync` call using `config.ClientId` in `src/MeisterProPR.Infrastructure/AzureDevOps/AdoCommentPoster.cs`
 
 **Checkpoint**: User Story 1 is fully functional. Admin can attach credentials to a client; all PR crawl and review operations for that client authenticate using the client's service principal.
 
@@ -110,12 +110,12 @@ No new NuGet packages, projects, or frameworks required. All dependencies (`Azur
 
 > **Write these FIRST — confirm they FAIL before implementation**
 
-- [ ] T029 [P] [US2] [TEST] Write failing integration test for `DELETE /clients/{clientId}/ado-credentials`: given a client with credentials, returns `204 No Content` and subsequent `GET /clients/{id}` shows `hasAdoCredentials: false`; given a client with no credentials, still returns `204 No Content` (idempotent); given missing client, returns `404` in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
-- [ ] T030 [P] [US2] [TEST] Write failing integration test for credential rotation: `PUT` credentials, then `PUT` again with new secret, then `GET /clients/{id}` — verify only one credential set stored (no duplicate insert); also verify `PostgresClientAdoCredentialRepository.UpsertAsync` called twice on same `clientId` does not throw or create duplicate records in `tests/MeisterProPR.Infrastructure.Tests/Repositories/PostgresClientAdoCredentialRepositoryTests.cs`
+- [X] T029 [P] [US2] [TEST] Write failing integration test for `DELETE /clients/{clientId}/ado-credentials`: given a client with credentials, returns `204 No Content` and subsequent `GET /clients/{id}` shows `hasAdoCredentials: false`; given a client with no credentials, still returns `204 No Content` (idempotent); given missing client, returns `404` in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
+- [X] T030 [P] [US2] [TEST] Write failing integration test for credential rotation: `PUT` credentials, then `PUT` again with new secret, then `GET /clients/{id}` — verify only one credential set stored (no duplicate insert); also verify `PostgresClientAdoCredentialRepository.UpsertAsync` called twice on same `clientId` does not throw or create duplicate records in `tests/MeisterProPR.Infrastructure.Tests/Repositories/PostgresClientAdoCredentialRepositoryTests.cs`
 
 ### Implementation for User Story 2
 
-- [ ] T031 [US2] Add `DeleteAdoCredentials` action: `[HttpDelete("clients/{clientId:guid}/ado-credentials")]`, `X-Admin-Key` guard, verify client exists (return `404` if not), call `IClientAdoCredentialRepository.ClearAsync`, return `204 No Content` — include full XML doc comments in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T031 [US2] Add `DeleteAdoCredentials` action: `[HttpDelete("clients/{clientId:guid}/ado-credentials")]`, `X-Admin-Key` guard, verify client exists (return `404` if not), call `IClientAdoCredentialRepository.ClearAsync`, return `204 No Content` — include full XML doc comments in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
 
 **Checkpoint**: User Stories 1 and 2 are both functional. Full credential lifecycle (set, rotate, clear) works via the admin API.
 
@@ -131,12 +131,12 @@ No new NuGet packages, projects, or frameworks required. All dependencies (`Azur
 
 > **Write these FIRST — confirm they FAIL before implementation**
 
-- [ ] T032 [P] [US3] [TEST] Write failing integration test confirming `GET /clients/{clientId}` response JSON does not contain any key matching `secret` (case-insensitive), correctly returns `hasAdoCredentials: true`, `adoTenantId`, and `adoClientId` when credentials are stored, and `hasAdoCredentials: false` with null fields when no credentials stored in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
-- [ ] T033 [P] [US3] [TEST] Write failing integration test confirming `GET /clients` list response — each item must not contain any secret-related key, and items for clients with credentials correctly show `hasAdoCredentials: true` in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
+- [X] T032 [P] [US3] [TEST] Write failing integration test confirming `GET /clients/{clientId}` response JSON does not contain any key matching `secret` (case-insensitive), correctly returns `hasAdoCredentials: true`, `adoTenantId`, and `adoClientId` when credentials are stored, and `hasAdoCredentials: false` with null fields when no credentials stored in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
+- [X] T033 [P] [US3] [TEST] Write failing integration test confirming `GET /clients` list response — each item must not contain any secret-related key, and items for clients with credentials correctly show `hasAdoCredentials: true` in `tests/MeisterProPR.Api.Tests/Controllers/ClientsControllerTests.cs`
 
 ### Implementation for User Story 3
 
-- [ ] T034 [US3] Verify `ClientResponse` sealed record definition contains no `Secret`, `AdoClientSecret`, or analogous property (compile-time enforcement); confirm `CreateClient`, `GetClient`, `GetClients`, `PatchClient` all return `ClientResponse` — no ad-hoc response type that might inadvertently include a secret field in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
+- [X] T034 [US3] Verify `ClientResponse` sealed record definition contains no `Secret`, `AdoClientSecret`, or analogous property (compile-time enforcement); confirm `CreateClient`, `GetClient`, `GetClients`, `PatchClient` all return `ClientResponse` — no ad-hoc response type that might inadvertently include a secret field in `src/MeisterProPR.Api/Controllers/ClientsController.cs`
 
 **Checkpoint**: All three user stories are independently functional and verified. Credential lifecycle is complete; secret is structurally absent from all API responses.
 
@@ -144,9 +144,9 @@ No new NuGet packages, projects, or frameworks required. All dependencies (`Azur
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T035 Run `dotnet test` from repository root and confirm all tests pass (145 existing + new tests green)
-- [ ] T036 [P] Regenerate `openapi.json` (run the app with Swashbuckle export or `dotnet run -- --swagger-export` equivalent) and commit the updated file to the repository root to satisfy the API-Contract-First principle
-- [ ] T037 Manually validate the quickstart.md flow against a running backend with a real or stub PostgreSQL instance: register client, PUT credentials, POST crawl-config, confirm identity resolution uses client credentials, DELETE credentials, confirm fallback to global
+- [X] T035 Run `dotnet test` from repository root and confirm all tests pass (145 existing + new tests green)
+- [X] T036 [P] Regenerate `openapi.json` (run the app with Swashbuckle export or `dotnet run -- --swagger-export` equivalent) and commit the updated file to the repository root to satisfy the API-Contract-First principle
+- [X] T037 Manually validate the quickstart.md flow against a running backend with a real or stub PostgreSQL instance: register client, PUT credentials, POST crawl-config, confirm identity resolution uses client credentials, DELETE credentials, confirm fallback to global
 
 ---
 

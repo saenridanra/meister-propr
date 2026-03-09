@@ -22,6 +22,8 @@ public sealed class PostgresContainerFixture : IAsyncLifetime
 
         var options = new DbContextOptionsBuilder<MeisterProPRDbContext>()
             .UseNpgsql(this.ConnectionString)
+            .ConfigureWarnings(w => w.Ignore(
+                Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning))
             .Options;
 
         await using var ctx = new MeisterProPRDbContext(options);

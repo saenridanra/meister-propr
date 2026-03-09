@@ -10,6 +10,7 @@ namespace MeisterProPR.Infrastructure.AzureDevOps;
 
 public sealed partial class AdoPullRequestFetcher(
     VssConnectionFactory connectionFactory,
+    IClientAdoCredentialRepository credentialRepository,
     ILogger<AdoPullRequestFetcher> logger) : IPullRequestFetcher
 {
     public async Task<PullRequest> FetchAsync(
@@ -18,9 +19,13 @@ public sealed partial class AdoPullRequestFetcher(
         string repositoryId,
         int pullRequestId,
         int iterationId,
+        Guid? clientId = null,
         CancellationToken cancellationToken = default)
     {
-        var connection = await connectionFactory.GetConnectionAsync(organizationUrl, cancellationToken);
+        var credentials = clientId.HasValue
+            ? await credentialRepository.GetByClientIdAsync(clientId.Value, cancellationToken)
+            : null;
+        var connection = await connectionFactory.GetConnectionAsync(organizationUrl, credentials, cancellationToken);
         var gitClient = connection.GetClient<GitHttpClient>();
 
         // Get PR metadata

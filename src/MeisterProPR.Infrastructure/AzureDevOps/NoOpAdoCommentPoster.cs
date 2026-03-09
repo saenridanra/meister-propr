@@ -18,6 +18,7 @@ public sealed class NoOpAdoCommentPoster(ILogger<NoOpAdoCommentPoster> logger) :
         int pullRequestId,
         int iterationId,
         ReviewResult result,
+        Guid? clientId = null,
         CancellationToken cancellationToken = default)
     {
         logger.LogWarning(

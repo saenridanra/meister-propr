@@ -69,7 +69,7 @@ try
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
             .Enrich.WithProperty("Application", "MeisterProPR")
-            // Scrub secrets from log output
+            // Scrub secrets from log output: X-Client-Key, X-Ado-Token, AZURE_CLIENT_SECRET, AdoClientSecret
             .Destructure.ByTransforming<HttpRequest>(r => new
             {
                 r.Method,

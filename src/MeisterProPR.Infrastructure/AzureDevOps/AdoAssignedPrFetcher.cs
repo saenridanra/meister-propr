@@ -9,6 +9,7 @@ namespace MeisterProPR.Infrastructure.AzureDevOps;
 /// <summary>ADO-backed implementation of <see cref="IAssignedPullRequestFetcher" />.</summary>
 public sealed class AdoAssignedPrFetcher(
     VssConnectionFactory connectionFactory,
+    IClientAdoCredentialRepository credentialRepository,
     ILogger<AdoAssignedPrFetcher> logger) : IAssignedPullRequestFetcher
 {
     private static readonly ActivitySource ActivitySource = new("MeisterProPR.Infrastructure");
@@ -28,7 +29,7 @@ public sealed class AdoAssignedPrFetcher(
         activity?.SetTag("ado.org", config.OrganizationUrl);
         activity?.SetTag("ado.project", config.ProjectId);
 
-        var gitClient = await this.ResolveGitClientAsync(config.OrganizationUrl, cancellationToken);
+        var gitClient = await this.ResolveGitClientAsync(config, cancellationToken);
 
         var criteria = new GitPullRequestSearchCriteria
         {
@@ -77,14 +78,16 @@ public sealed class AdoAssignedPrFetcher(
         return results;
     }
 
-    private async Task<GitHttpClient> ResolveGitClientAsync(string orgUrl, CancellationToken ct)
+    private async Task<GitHttpClient> ResolveGitClientAsync(CrawlConfigurationDto config, CancellationToken ct)
     {
+        var credentials = await credentialRepository.GetByClientIdAsync(config.ClientId, ct);
+
         if (this.GitClientResolver is not null)
         {
-            return await this.GitClientResolver(orgUrl, ct);
+            return await this.GitClientResolver(config.OrganizationUrl, ct);
         }
 
-        var connection = await connectionFactory.GetConnectionAsync(orgUrl, ct);
+        var connection = await connectionFactory.GetConnectionAsync(config.OrganizationUrl, credentials, ct);
         return connection.GetClient<GitHttpClient>();
     }
 }

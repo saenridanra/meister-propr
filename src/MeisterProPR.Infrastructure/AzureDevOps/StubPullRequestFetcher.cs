@@ -18,6 +18,7 @@ public sealed class StubPullRequestFetcher(ILogger<StubPullRequestFetcher> logge
         string repositoryId,
         int pullRequestId,
         int iterationId,
+        Guid? clientId = null,
         CancellationToken cancellationToken = default)
     {
         logger.LogWarning(

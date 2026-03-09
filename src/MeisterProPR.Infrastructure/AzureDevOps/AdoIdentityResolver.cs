@@ -1,6 +1,7 @@
 using System.Net.Http.Headers;
 using System.Text.Json;
 using Azure.Core;
+using Azure.Identity;
 using MeisterProPR.Application.Interfaces;
 
 namespace MeisterProPR.Infrastructure.AzureDevOps;
@@ -10,7 +11,10 @@ namespace MeisterProPR.Infrastructure.AzureDevOps;
 ///     org-scoped VSSPS identity endpoint, which the service principal's token is
 ///     authorised to access (unlike the global <c>vssps.visualstudio.com</c> endpoint).
 /// </summary>
-public sealed class AdoIdentityResolver(TokenCredential credential, IHttpClientFactory httpClientFactory)
+public sealed class AdoIdentityResolver(
+    TokenCredential credential,
+    IHttpClientFactory httpClientFactory,
+    IClientAdoCredentialRepository credentialRepository)
     : IIdentityResolver
 {
     private const string AdoScope = "499b84ac-1321-427f-aa17-267ca6975798/.default";
@@ -22,9 +26,19 @@ public sealed class AdoIdentityResolver(TokenCredential credential, IHttpClientF
     public async Task<IReadOnlyList<ResolvedIdentity>> ResolveAsync(
         string organizationUrl,
         string displayName,
+        Guid clientId,
         CancellationToken ct = default)
     {
-        var token = await credential.GetTokenAsync(new TokenRequestContext([AdoScope]), ct);
+        var perClientCredentials = await credentialRepository.GetByClientIdAsync(clientId, ct);
+
+        TokenCredential effectiveCredential = perClientCredentials is not null
+            ? new ClientSecretCredential(
+                perClientCredentials.TenantId,
+                perClientCredentials.ClientId,
+                perClientCredentials.Secret)
+            : credential;
+
+        var token = await effectiveCredential.GetTokenAsync(new TokenRequestContext([AdoScope]), ct);
 
         // Extract org name from https://dev.azure.com/{org}
         var orgName = new Uri(organizationUrl).Segments.Last().TrimEnd('/');

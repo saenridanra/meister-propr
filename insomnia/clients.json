@@ -23,7 +23,11 @@
         "client_id": "00000000-0000-0000-0000-000000000000",
         "config_id": "00000000-0000-0000-0000-000000000000",
         "org_url": "https://dev.azure.com/my-org",
-        "display_name": "My Service Principal"
+        "project_id": "my-actual-project-name-or-guid",
+        "display_name": "My Service Principal",
+        "ado_tenant_id": "your-azure-tenant-id",
+        "ado_client_id": "your-azure-client-id",
+        "ado_client_secret": "your-azure-client-secret"
       }
     },
     {
@@ -117,6 +121,34 @@
       "body": {}
     },
     {
+      "_id": "req_clients_put_ado_credentials",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Set ADO Credentials",
+      "method": "PUT",
+      "url": "{{ base_url }}/clients/{{ client_id }}/ado-credentials",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"tenantId\": \"{{ ado_tenant_id }}\",\n  \"clientId\": \"{{ ado_client_id }}\",\n  \"secret\": \"{{ ado_client_secret }}\"\n}"
+      }
+    },
+    {
+      "_id": "req_clients_delete_ado_credentials",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Delete ADO Credentials",
+      "method": "DELETE",
+      "url": "{{ base_url }}/clients/{{ client_id }}/ado-credentials",
+      "headers": [
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {}
+    },
+    {
       "_id": "fld_identities",
       "_type": "request_group",
       "parentId": "wrk_meisterpropr",
@@ -153,7 +185,7 @@
       ],
       "body": {
         "mimeType": "application/json",
-        "text": "{\n  \"organizationUrl\": \"{{ org_url }}\",\n  \"projectId\": \"my-project-id\",\n  \"reviewerDisplayName\": \"{{ display_name }}\",\n  \"crawlIntervalSeconds\": 60\n}"
+        "text": "{\n  \"organizationUrl\": \"{{ org_url }}\",\n  \"projectId\": \"{{ project_id }}\",\n  \"reviewerDisplayName\": \"{{ display_name }}\",\n  \"crawlIntervalSeconds\": 60\n}"
       }
     },
     {

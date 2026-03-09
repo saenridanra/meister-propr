@@ -24,5 +24,6 @@ public interface IAdoCommentPoster
         int pullRequestId,
         int iterationId,
         ReviewResult result,
+        Guid? clientId = null,
         CancellationToken cancellationToken = default);
 }

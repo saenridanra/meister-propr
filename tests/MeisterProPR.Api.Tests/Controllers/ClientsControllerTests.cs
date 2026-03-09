@@ -219,6 +219,151 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    // ── PUT /clients/{clientId}/ado-credentials (T018) ────────────────────────
+
+    [Fact]
+    public async Task PutAdoCredentials_WithValidFields_Returns204()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/clients/{clientId}/ado-credentials");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+        request.Content = JsonContent.Create(new
+        {
+            tenantId = "tenant-id-abc",
+            clientId = "client-id-abc",
+            secret = "super-secret-value",
+        });
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutAdoCredentials_MissingField_Returns400()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/clients/{clientId}/ado-credentials");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+        // Missing secret
+        request.Content = JsonContent.Create(new { tenantId = "t", clientId = "c", secret = "" });
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutAdoCredentials_WithoutAdminKey_Returns401()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/clients/{clientId}/ado-credentials");
+        request.Content = JsonContent.Create(new { tenantId = "t", clientId = "c", secret = "s" });
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PutAdoCredentials_UnknownClient_Returns404()
+    {
+        var unknownId = Guid.NewGuid();
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/clients/{unknownId}/ado-credentials");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+        request.Content = JsonContent.Create(new { tenantId = "t", clientId = "c", secret = "s" });
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    // ── DELETE /clients/{clientId}/ado-credentials (T029) ────────────────────
+
+    [Fact]
+    public async Task DeleteAdoCredentials_ExistingClient_Returns204()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/clients/{clientId}/ado-credentials");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteAdoCredentials_UnknownClient_Returns404()
+    {
+        var unknownId = Guid.NewGuid();
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/clients/{unknownId}/ado-credentials");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteAdoCredentials_WithoutAdminKey_Returns401()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Delete, $"/clients/{clientId}/ado-credentials");
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    // ── GET /clients/{clientId} — no secret in response (T032) ───────────────
+
+    [Fact]
+    public async Task GetClient_ResponseDoesNotContainSecret()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/clients/{clientId}");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("secret", body, StringComparison.OrdinalIgnoreCase);
+        Assert.True(JsonDocument.Parse(body).RootElement.TryGetProperty("hasAdoCredentials", out _));
+    }
+
+    [Fact]
+    public async Task GetClient_WithNoCredentials_HasAdoCredentialsFalse()
+    {
+        var clientId = factory.ClientId;
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, $"/clients/{clientId}");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.False(body.RootElement.GetProperty("hasAdoCredentials").GetBoolean());
+    }
+
+    // ── GET /clients — no secret in list response (T033) ─────────────────────
+
+    [Fact]
+    public async Task GetClients_ListResponseDoesNotContainSecret()
+    {
+        var client = factory.CreateClient();
+        using var request = new HttpRequestMessage(HttpMethod.Get, "/clients");
+        request.Headers.Add("X-Admin-Key", ValidAdminKey);
+
+        var response = await client.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = await response.Content.ReadAsStringAsync();
+        Assert.DoesNotContain("secret", body, StringComparison.OrdinalIgnoreCase);
+    }
+
     // ── Factory ───────────────────────────────────────────────────────────────
 
     public sealed class ClientsApiFactory : WebApplicationFactory<Program>
@@ -320,10 +465,20 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
 
                 // Provide a stub IIdentityResolver that returns one identity for any display name.
                 var identityResolver = Substitute.For<IIdentityResolver>();
-                identityResolver.ResolveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                identityResolver.ResolveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
                     .Returns(Task.FromResult<IReadOnlyList<ResolvedIdentity>>(
                         [new ResolvedIdentity(Guid.NewGuid(), "Test Reviewer")]));
                 services.AddSingleton(identityResolver);
+
+                // Provide an in-memory IClientAdoCredentialRepository
+                var adoCredRepo = Substitute.For<IClientAdoCredentialRepository>();
+                adoCredRepo.GetByClientIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                    .Returns(Task.FromResult<ClientAdoCredentials?>(null));
+                adoCredRepo.UpsertAsync(Arg.Any<Guid>(), Arg.Any<ClientAdoCredentials>(), Arg.Any<CancellationToken>())
+                    .Returns(Task.CompletedTask);
+                adoCredRepo.ClearAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+                    .Returns(Task.CompletedTask);
+                services.AddSingleton(adoCredRepo);
             });
         }
     }

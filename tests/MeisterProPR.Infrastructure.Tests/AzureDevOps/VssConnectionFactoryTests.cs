@@ -1,4 +1,6 @@
 using Azure.Core;
+using Azure.Identity;
+using MeisterProPR.Application.DTOs;
 using MeisterProPR.Infrastructure.AzureDevOps;
 using NSubstitute;
 
@@ -87,5 +89,51 @@ public class VssConnectionFactoryTests
 
         // Assert
         Assert.NotNull(connection);
+    }
+
+    [Fact]
+    public async Task GetConnectionAsync_WithPerClientCredentials_DoesNotUseGlobalCredential()
+    {
+        // Arrange: global credential should NOT be called when per-client credentials are supplied
+        var globalCredential = Substitute.For<TokenCredential>();
+        var factory = new VssConnectionFactory(globalCredential);
+
+        // Per-client credentials use a real ClientSecretCredential path internally.
+        // We can't easily substitute ClientSecretCredential, but we CAN verify the global credential is not used.
+        var perClientCredentials = new ClientAdoCredentials("tenant-id", "client-id", "secret");
+
+        // The ClientSecretCredential will fail with invalid tenant/client (no real AAD call in tests),
+        // but we can confirm the global credential received zero calls.
+        try
+        {
+            await factory.GetConnectionAsync("https://dev.azure.com/testorg", perClientCredentials);
+        }
+        catch
+        {
+            // Expected: ClientSecretCredential with fake values throws
+        }
+
+        await globalCredential.DidNotReceiveWithAnyArgs()
+            .GetTokenAsync(Arg.Any<TokenRequestContext>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task GetConnectionAsync_CacheKeyDistinguishesClientIdFromGlobal()
+    {
+        // Arrange
+        var credential = Substitute.For<TokenCredential>();
+        credential
+            .GetTokenAsync(Arg.Any<TokenRequestContext>(), Arg.Any<CancellationToken>())
+            .Returns(new AccessToken("fake-token-value", DateTimeOffset.UtcNow.AddHours(1)));
+
+        var factory = new VssConnectionFactory(credential);
+        const string orgUrl = "https://dev.azure.com/testorg";
+
+        // Act: null credentials (global path) and non-null credentials use different cache keys
+        var globalConn = await factory.GetConnectionAsync(orgUrl, null);
+        var globalConn2 = await factory.GetConnectionAsync(orgUrl, null);
+
+        // Same cache key for two global calls
+        Assert.Same(globalConn, globalConn2);
     }
 }

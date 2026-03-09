@@ -10,6 +10,7 @@ public interface IIdentityResolver
     Task<IReadOnlyList<ResolvedIdentity>> ResolveAsync(
         string organizationUrl,
         string displayName,
+        Guid clientId,
         CancellationToken ct = default);
 }
 

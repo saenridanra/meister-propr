@@ -9,6 +9,7 @@ public sealed class StubIdentityResolver : IIdentityResolver
     public Task<IReadOnlyList<ResolvedIdentity>> ResolveAsync(
         string organizationUrl,
         string displayName,
+        Guid clientId,
         CancellationToken ct = default)
         => Task.FromResult<IReadOnlyList<ResolvedIdentity>>([]);
 }

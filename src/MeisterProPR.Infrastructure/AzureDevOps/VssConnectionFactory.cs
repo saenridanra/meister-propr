@@ -1,5 +1,7 @@
 using System.Collections.Concurrent;
 using Azure.Core;
+using Azure.Identity;
+using MeisterProPR.Application.DTOs;
 using Microsoft.VisualStudio.Services.OAuth;
 using Microsoft.VisualStudio.Services.WebApi;
 
@@ -10,18 +12,26 @@ public sealed class VssConnectionFactory(TokenCredential credential)
     private const string AdoResourceScope = "499b84ac-1321-427f-aa17-267ca6975798/.default";
     private readonly ConcurrentDictionary<string, VssConnection> _cache = new(StringComparer.OrdinalIgnoreCase);
 
-    public async Task<VssConnection> GetConnectionAsync(string organizationUrl, CancellationToken ct = default)
+    public async Task<VssConnection> GetConnectionAsync(
+        string organizationUrl,
+        ClientAdoCredentials? credentials = null,
+        CancellationToken ct = default)
     {
-        if (this._cache.TryGetValue(organizationUrl, out var cached))
+        var cacheKey = $"{organizationUrl}::{credentials?.ClientId ?? "global"}";
+        if (this._cache.TryGetValue(cacheKey, out var cached))
         {
             return cached;
         }
 
-        var token = await credential.GetTokenAsync(new TokenRequestContext([AdoResourceScope]), ct);
+        TokenCredential effectiveCredential = credentials is not null
+            ? new ClientSecretCredential(credentials.TenantId, credentials.ClientId, credentials.Secret)
+            : credential;
+
+        var token = await effectiveCredential.GetTokenAsync(new TokenRequestContext([AdoResourceScope]), ct);
         var conn = new VssConnection(
             new Uri(organizationUrl),
             new VssOAuthAccessTokenCredential(token.Token));
-        this._cache[organizationUrl] = conn;
+        this._cache[cacheKey] = conn;
         return conn;
     }
 }

@@ -36,6 +36,7 @@ public sealed class ReviewOrchestrationService(
                 job.RepositoryId,
                 job.PullRequestId,
                 job.IterationId,
+                job.ClientId,
                 ct);
 
             // EC-002: PR was closed or abandoned before the review could run.
@@ -59,6 +60,7 @@ public sealed class ReviewOrchestrationService(
                 job.PullRequestId,
                 job.IterationId,
                 result,
+                job.ClientId,
                 ct);
 
             jobs.SetResult(job.Id, result);

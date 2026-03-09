@@ -1,3 +1,4 @@
+using MeisterProPR.Application.DTOs;
 using MeisterProPR.Application.Interfaces;
 using MeisterProPR.Infrastructure.Data;
 using MeisterProPR.Infrastructure.Data.Models;
@@ -12,7 +13,8 @@ public sealed class ClientsController(
     MeisterProPRDbContext dbContext,
     IClientRegistry clientRegistry,
     ICrawlConfigurationRepository crawlConfigs,
-    IIdentityResolver identityResolver) : ControllerBase
+    IIdentityResolver identityResolver,
+    IClientAdoCredentialRepository adoCredentialRepository) : ControllerBase
 {
     // ── Client-Scoped: Crawl Configurations ──────────────────────────────────
 
@@ -68,7 +70,7 @@ public sealed class ClientsController(
         if (request.CrawlIntervalSeconds < 10)
             return this.BadRequest(new { error = "CrawlIntervalSeconds must be >= 10." });
 
-        var identityMatches = await identityResolver.ResolveAsync(request.OrganizationUrl, request.ReviewerDisplayName, ct);
+        var identityMatches = await identityResolver.ResolveAsync(request.OrganizationUrl, request.ReviewerDisplayName, clientId, ct);
         if (identityMatches.Count == 0)
             return this.BadRequest(new { error = $"No ADO identity found with display name '{request.ReviewerDisplayName}'." });
 
@@ -105,6 +107,7 @@ public sealed class ClientsController(
                 config.IsActive,
                 config.CreatedAt));
     }
+
     // ── Admin: Client Management ─────────────────────────────────────────────
 
     /// <summary>
@@ -157,7 +160,7 @@ public sealed class ClientsController(
         return this.CreatedAtAction(
             nameof(this.GetClient),
             new { clientId = client.Id },
-            new ClientResponse(client.Id, client.DisplayName, client.IsActive, client.CreatedAt));
+            ToClientResponse(client));
     }
 
     /// <summary>
@@ -184,7 +187,7 @@ public sealed class ClientsController(
             return this.NotFound();
         }
 
-        return this.Ok(new ClientResponse(client.Id, client.DisplayName, client.IsActive, client.CreatedAt));
+        return this.Ok(ToClientResponse(client));
     }
 
     /// <summary>
@@ -204,10 +207,9 @@ public sealed class ClientsController(
 
         var clients = await dbContext.Clients
             .OrderByDescending(c => c.CreatedAt)
-            .Select(c => new ClientResponse(c.Id, c.DisplayName, c.IsActive, c.CreatedAt))
             .ToListAsync();
 
-        return this.Ok(clients);
+        return this.Ok(clients.Select(ToClientResponse).ToList());
     }
 
     /// <summary>
@@ -303,7 +305,75 @@ public sealed class ClientsController(
         client.IsActive = request.IsActive;
         await dbContext.SaveChangesAsync();
 
-        return this.Ok(new ClientResponse(client.Id, client.DisplayName, client.IsActive, client.CreatedAt));
+        return this.Ok(ToClientResponse(client));
+    }
+
+    /// <summary>
+    ///     Sets or replaces ADO service principal credentials for a client. Requires <c>X-Admin-Key</c>.
+    /// </summary>
+    /// <param name="clientId">Client identifier.</param>
+    /// <param name="request">ADO credential details — all three fields required.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="204">Credentials stored.</response>
+    /// <response code="400">One or more fields are missing or blank.</response>
+    /// <response code="401">Missing or invalid <c>X-Admin-Key</c>.</response>
+    /// <response code="404">Client not found.</response>
+    [HttpPut("clients/{clientId:guid}/ado-credentials")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> PutAdoCredentials(
+        Guid clientId,
+        [FromBody] SetAdoCredentialsRequest request,
+        CancellationToken ct = default)
+    {
+        if (this.HttpContext.Items["IsAdmin"] is not true)
+            return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
+
+        if (string.IsNullOrWhiteSpace(request.TenantId) ||
+            string.IsNullOrWhiteSpace(request.ClientId) ||
+            string.IsNullOrWhiteSpace(request.Secret))
+        {
+            return this.BadRequest(new { error = "TenantId, ClientId, and Secret are all required." });
+        }
+
+        var clientExists = await dbContext.Clients.AnyAsync(c => c.Id == clientId, ct);
+        if (!clientExists)
+            return this.NotFound();
+
+        await adoCredentialRepository.UpsertAsync(
+            clientId,
+            new ClientAdoCredentials(request.TenantId, request.ClientId, request.Secret),
+            ct);
+
+        return this.NoContent();
+    }
+
+    /// <summary>
+    ///     Removes ADO service principal credentials from a client. Requires <c>X-Admin-Key</c>.
+    ///     The client falls back to the global backend identity on subsequent ADO operations.
+    /// </summary>
+    /// <param name="clientId">Client identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="204">Credentials removed (or client had no credentials — idempotent).</response>
+    /// <response code="401">Missing or invalid <c>X-Admin-Key</c>.</response>
+    /// <response code="404">Client not found.</response>
+    [HttpDelete("clients/{clientId:guid}/ado-credentials")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteAdoCredentials(Guid clientId, CancellationToken ct = default)
+    {
+        if (this.HttpContext.Items["IsAdmin"] is not true)
+            return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
+
+        var clientExists = await dbContext.Clients.AnyAsync(c => c.Id == clientId, ct);
+        if (!clientExists)
+            return this.NotFound();
+
+        await adoCredentialRepository.ClearAsync(clientId, ct);
+        return this.NoContent();
     }
 
     /// <summary>
@@ -396,8 +466,25 @@ public sealed class ClientsController(
                 config.CreatedAt));
     }
 
-    /// <summary>Client response (key is never included).</summary>
-    public sealed record ClientResponse(Guid Id, string DisplayName, bool IsActive, DateTimeOffset CreatedAt);
+    private static ClientResponse ToClientResponse(ClientRecord client) =>
+        new(
+            client.Id,
+            client.DisplayName,
+            client.IsActive,
+            client.CreatedAt,
+            client.AdoTenantId != null && client.AdoClientId != null && client.AdoClientSecret != null,
+            client.AdoTenantId,
+            client.AdoClientId);
+
+    /// <summary>Client response — key and ADO secret are never included.</summary>
+    public sealed record ClientResponse(
+        Guid Id,
+        string DisplayName,
+        bool IsActive,
+        DateTimeOffset CreatedAt,
+        bool HasAdoCredentials,
+        string? AdoTenantId,
+        string? AdoClientId);
 
     /// <summary>Crawl configuration response.</summary>
     public sealed record CrawlConfigResponse(
@@ -427,4 +514,7 @@ public sealed class ClientsController(
 
     /// <summary>Request body for patching a crawl configuration's active status.</summary>
     public sealed record PatchCrawlConfigRequest(bool IsActive);
+
+    /// <summary>Request body for setting ADO service principal credentials.</summary>
+    public sealed record SetAdoCredentialsRequest(string TenantId, string ClientId, string Secret);
 }
