@@ -159,7 +159,7 @@
 - [X] T040 [P] Regenerate `openapi.json` at repo root: `dotnet build src/MeisterProPR.Api` to trigger Swashbuckle generation, then commit updated file; verify new endpoints (`/clients`, `/clients/{id}/crawl-configurations`, `/jobs`) appear in the output
 - [X] T041 [P] Update `CLAUDE.md` Key Environment Variables table to add `DB_CONNECTION_STRING`, `MEISTER_ADMIN_KEY`, `PR_CRAWL_INTERVAL_SECONDS`
 - [X] T042 [P] Update `src/MeisterProPR.Infrastructure/DependencyInjection/InfrastructureServiceExtensions.cs` description comment to reflect that `IJobRepository` is now backed by PostgreSQL; remove any stale references to `InMemoryJobRepository` from production DI (keep only in test helpers)
-- [ ] T043 Run quickstart.md validation: `docker compose up` → seed client via `POST /clients` → add crawl config via `POST /clients/{id}/crawl-configurations` → verify `/healthz` returns `200` → verify `/metrics` returns Prometheus output → verify `GET /jobs` with admin key works
+- [X] T043 Run quickstart.md validation: `docker compose up` → seed client via `POST /clients` → add crawl config via `POST /clients/{id}/crawl-configurations` → verify `/healthz` returns `200` → verify `/metrics` returns Prometheus output → verify `GET /jobs` with admin key works
 
 ---
 

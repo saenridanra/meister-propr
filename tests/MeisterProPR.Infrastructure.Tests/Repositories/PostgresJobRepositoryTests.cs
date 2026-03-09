@@ -3,28 +3,25 @@ using MeisterProPR.Domain.Enums;
 using MeisterProPR.Domain.ValueObjects;
 using MeisterProPR.Infrastructure.Data;
 using MeisterProPR.Infrastructure.Repositories;
+using MeisterProPR.Infrastructure.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
-using Testcontainers.PostgreSql;
 
 namespace MeisterProPR.Infrastructure.Tests.Repositories;
 
 /// <summary>
 ///     Integration tests for <see cref="PostgresJobRepository" /> against a real PostgreSQL instance.
+///     Uses a shared <see cref="PostgresContainerFixture" /> (one container for the whole collection)
+///     to avoid the Podman port-binding instability of starting a container per test method.
 /// </summary>
 [Collection("PostgresIntegration")]
-public sealed class PostgresJobRepositoryTests : IAsyncLifetime
+public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture) : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
-        .Build();
-
     private MeisterProPRDbContext _dbContext = null!;
     private PostgresJobRepository _repo = null!;
 
     public async Task DisposeAsync()
     {
         await this._dbContext.DisposeAsync();
-        await this._postgres.DisposeAsync();
     }
 
     [Fact]
@@ -104,12 +101,12 @@ public sealed class PostgresJobRepositoryTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await this._postgres.StartAsync();
         var options = new DbContextOptionsBuilder<MeisterProPRDbContext>()
-            .UseNpgsql(this._postgres.GetConnectionString())
+            .UseNpgsql(fixture.ConnectionString)
             .Options;
         this._dbContext = new MeisterProPRDbContext(options);
-        await this._dbContext.Database.MigrateAsync();
+        // Wipe job rows between tests so count-based assertions stay deterministic.
+        await this._dbContext.ReviewJobs.ExecuteDeleteAsync();
         this._repo = new PostgresJobRepository(this._dbContext);
     }
 

@@ -1,5 +1,6 @@
 using MeisterProPR.Application.DTOs;
 using MeisterProPR.Application.Interfaces;
+using MeisterProPR.Api.Tests.Fixtures;
 using MeisterProPR.Domain.Entities;
 using MeisterProPR.Domain.ValueObjects;
 using MeisterProPR.Infrastructure.Data;
@@ -9,7 +10,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Testcontainers.PostgreSql;
 
 namespace MeisterProPR.Api.Tests;
 
@@ -18,12 +18,9 @@ namespace MeisterProPR.Api.Tests;
 ///     a PR with an existing Completed review job must NOT trigger a second job
 ///     after service restart (i.e. in a fresh DI scope backed by the same Postgres DB).
 /// </summary>
-[Collection("PrCrawlRestartIntegration")]
-public sealed class PrCrawlRestartTests : IAsyncLifetime
+[Collection("PostgresApiIntegration")]
+public sealed class PrCrawlRestartTests(PostgresContainerFixture fixture) : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
-        .Build();
 
     /// <summary>
     ///     Seeds a Completed job for PR #42 directly into Postgres (before the app starts),
@@ -34,7 +31,7 @@ public sealed class PrCrawlRestartTests : IAsyncLifetime
     [Fact]
     public async Task CrawlAsync_CompletedJobExistsAfterRestart_DoesNotCreateDuplicate()
     {
-        var connectionString = this._postgres.GetConnectionString();
+        var connectionString = fixture.ConnectionString;
 
         // Step 1 — run migrations and seed the Completed job BEFORE the factory starts.
         // This prevents a race between the AdoPrCrawlerWorker's immediate startup crawl
@@ -45,7 +42,7 @@ public sealed class PrCrawlRestartTests : IAsyncLifetime
 
         await using (var db = new MeisterProPRDbContext(dbOptions))
         {
-            await db.Database.MigrateAsync();
+            // Migrations already applied by PostgresContainerFixture.InitializeAsync().
             var repo = new PostgresJobRepository(db);
             var job = new ReviewJob(
                 Guid.NewGuid(),
@@ -122,13 +119,15 @@ public sealed class PrCrawlRestartTests : IAsyncLifetime
         }
     }
 
-    public async Task DisposeAsync()
-    {
-        await this._postgres.DisposeAsync();
-    }
+    public async Task DisposeAsync() { }
 
     public async Task InitializeAsync()
     {
-        await this._postgres.StartAsync();
+        // Wipe jobs so the count assertion (total == 1) is not polluted by other tests.
+        var opts = new DbContextOptionsBuilder<MeisterProPRDbContext>()
+            .UseNpgsql(fixture.ConnectionString)
+            .Options;
+        await using var db = new MeisterProPRDbContext(opts);
+        await db.ReviewJobs.ExecuteDeleteAsync();
     }
 }

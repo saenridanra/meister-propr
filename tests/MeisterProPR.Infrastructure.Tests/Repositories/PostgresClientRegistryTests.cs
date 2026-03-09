@@ -1,29 +1,26 @@
 using MeisterProPR.Infrastructure.Data;
 using MeisterProPR.Infrastructure.Data.Models;
 using MeisterProPR.Infrastructure.Repositories;
+using MeisterProPR.Infrastructure.Tests.Fixtures;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
-using Testcontainers.PostgreSql;
 
 namespace MeisterProPR.Infrastructure.Tests.Repositories;
 
 /// <summary>
 ///     Integration tests for <see cref="PostgresClientRegistry" /> against a real PostgreSQL instance.
+///     Uses a shared <see cref="PostgresContainerFixture" /> (one container for the whole collection)
+///     to avoid the Podman port-binding instability of starting a container per test method.
 /// </summary>
 [Collection("PostgresIntegration")]
-public sealed class PostgresClientRegistryTests : IAsyncLifetime
+public sealed class PostgresClientRegistryTests(PostgresContainerFixture fixture) : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
-        .Build();
-
     private MeisterProPRDbContext _dbContext = null!;
     private PostgresClientRegistry _registry = null!;
 
     public async Task DisposeAsync()
     {
         await this._dbContext.DisposeAsync();
-        await this._postgres.DisposeAsync();
     }
 
     // ── GetClientIdByKeyAsync (T046) ──────────────────────────────────────────
@@ -61,12 +58,12 @@ public sealed class PostgresClientRegistryTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
-        await this._postgres.StartAsync();
         var options = new DbContextOptionsBuilder<MeisterProPRDbContext>()
-            .UseNpgsql(this._postgres.GetConnectionString())
+            .UseNpgsql(fixture.ConnectionString)
             .Options;
         this._dbContext = new MeisterProPRDbContext(options);
-        await this._dbContext.Database.MigrateAsync();
+        // Wipe client rows between tests (CASCADE removes crawl_configurations too).
+        await this._dbContext.Clients.ExecuteDeleteAsync();
         this._registry = new PostgresClientRegistry(this._dbContext, NullLogger<PostgresClientRegistry>.Instance);
     }
 

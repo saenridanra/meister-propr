@@ -1,3 +1,4 @@
+using MeisterProPR.Api.Tests.Fixtures;
 using MeisterProPR.Application.Interfaces;
 using MeisterProPR.Domain.Entities;
 using MeisterProPR.Domain.Enums;
@@ -8,7 +9,6 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
-using Testcontainers.PostgreSql;
 
 namespace MeisterProPR.Api.Tests;
 
@@ -18,21 +18,19 @@ namespace MeisterProPR.Api.Tests;
 ///     must be reset to <see cref="JobStatus.Pending" /> by the startup recovery logic in
 ///     <c>Program.cs</c> before the application starts serving requests.
 /// </summary>
-[Collection("StartupRecoveryIntegration")]
-public sealed class StartupRecoveryTests : IAsyncLifetime
+[Collection("PostgresApiIntegration")]
+public sealed class StartupRecoveryTests(PostgresContainerFixture fixture) : IAsyncLifetime
 {
-    private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
-        .WithImage("postgres:17-alpine")
-        .Build();
-
-    public async Task DisposeAsync()
-    {
-        await this._postgres.DisposeAsync();
-    }
+    public async Task DisposeAsync() { }
 
     public async Task InitializeAsync()
     {
-        await this._postgres.StartAsync();
+        // Wipe jobs so a stale Processing job from a previous run doesn't interfere.
+        var opts = new DbContextOptionsBuilder<MeisterProPRDbContext>()
+            .UseNpgsql(fixture.ConnectionString)
+            .Options;
+        await using var db = new MeisterProPRDbContext(opts);
+        await db.ReviewJobs.ExecuteDeleteAsync();
     }
 
     /// <summary>
@@ -44,9 +42,10 @@ public sealed class StartupRecoveryTests : IAsyncLifetime
     [Fact]
     public async Task Startup_ProcessingJobInDatabase_TransitionsJobToPending()
     {
-        var connectionString = this._postgres.GetConnectionString();
+        var connectionString = fixture.ConnectionString;
 
-        // Step 1 — prepare DB and seed a stale Processing job directly (pre-restart)
+        // Step 1 — prepare DB and seed a stale Processing job directly (pre-restart).
+        // Migrations already applied by PostgresContainerFixture.InitializeAsync().
         var options = new DbContextOptionsBuilder<MeisterProPRDbContext>()
             .UseNpgsql(connectionString)
             .Options;
@@ -54,7 +53,6 @@ public sealed class StartupRecoveryTests : IAsyncLifetime
         Guid stalJobId;
         await using (var db = new MeisterProPRDbContext(options))
         {
-            await db.Database.MigrateAsync();
             var repo = new PostgresJobRepository(db);
             var job = new ReviewJob(
                 Guid.NewGuid(),
