@@ -60,7 +60,7 @@ public sealed class JobsControllerTests(JobsControllerTests.JobsApiFactory facto
         var repo = factory.Services.GetRequiredService<IJobRepository>();
         var completedJob = new ReviewJob(
             Guid.NewGuid(),
-            "test-key-123",
+            Guid.NewGuid(),
             "https://dev.azure.com/org",
             "proj",
             "repo",

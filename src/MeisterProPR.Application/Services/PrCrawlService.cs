@@ -54,7 +54,7 @@ public sealed partial class PrCrawlService(
 
                 var job = new ReviewJob(
                     Guid.NewGuid(),
-                    null,
+                    config.ClientId,
                     pr.OrganizationUrl,
                     pr.ProjectId,
                     pr.RepositoryId,

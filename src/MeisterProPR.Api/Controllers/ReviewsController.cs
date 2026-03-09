@@ -2,6 +2,7 @@ using MeisterProPR.Application.Interfaces;
 using MeisterProPR.Domain.Entities;
 using MeisterProPR.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Http;
 
 namespace MeisterProPR.Api.Controllers;
 
@@ -11,6 +12,7 @@ namespace MeisterProPR.Api.Controllers;
 public sealed partial class ReviewsController(
     IJobRepository jobRepository,
     IAdoTokenValidator adoTokenValidator,
+    IClientRegistry clientRegistry,
     ILogger<ReviewsController> logger) : ControllerBase
 {
     private static ReviewListItem MapToListItem(ReviewJob job)
@@ -100,7 +102,13 @@ public sealed partial class ReviewsController(
         }
 
         var clientKey = this.HttpContext.Items["ClientKey"] as string ?? "";
-        var jobs = jobRepository.GetAllForClient(clientKey);
+        var clientId = await clientRegistry.GetClientIdByKeyAsync(clientKey, ct);
+        if (clientId is null)
+        {
+            return this.Unauthorized();
+        }
+
+        var jobs = jobRepository.GetAllForClient(clientId.Value);
         return this.Ok(jobs.Select(MapToListItem).ToArray());
     }
 
@@ -127,6 +135,11 @@ public sealed partial class ReviewsController(
         }
 
         var clientKey = this.HttpContext.Items["ClientKey"] as string ?? "";
+        var clientId = await clientRegistry.GetClientIdByKeyAsync(clientKey, ct);
+        if (clientId is null)
+        {
+            return this.Unauthorized();
+        }
 
         var existing = jobRepository.FindActiveJob(
             request.OrganizationUrl,
@@ -142,7 +155,7 @@ public sealed partial class ReviewsController(
 
         var job = new ReviewJob(
             Guid.NewGuid(),
-            clientKey,
+            clientId,
             request.OrganizationUrl,
             request.ProjectId,
             request.RepositoryId,

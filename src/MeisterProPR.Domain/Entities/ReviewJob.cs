@@ -13,7 +13,7 @@ public sealed class ReviewJob
     /// </summary>
     public ReviewJob(
         Guid id,
-        string? clientKey,
+        Guid? clientId,
         string organizationUrl,
         string projectId,
         string repositoryId,
@@ -50,13 +50,8 @@ public sealed class ReviewJob
             throw new ArgumentOutOfRangeException(nameof(iterationId));
         }
 
-        if (clientKey is not null && string.IsNullOrWhiteSpace(clientKey))
-        {
-            throw new ArgumentException("ClientKey must not be empty if provided.", nameof(clientKey));
-        }
-
         this.Id = id;
-        this.ClientKey = clientKey;
+        this.ClientId = clientId;
         this.OrganizationUrl = organizationUrl;
         this.ProjectId = projectId;
         this.RepositoryId = repositoryId;
@@ -120,9 +115,9 @@ public sealed class ReviewJob
     public string RepositoryId { get; init; }
 
     /// <summary>
-    ///     Client key that submitted the job. Null for crawler-initiated jobs.
+    ///     Client that owns this job. Null for legacy jobs without client tracking.
     /// </summary>
-    public string? ClientKey { get; init; }
+    public Guid? ClientId { get; init; }
 
     /// <summary>
     ///     Error message if the job failed.

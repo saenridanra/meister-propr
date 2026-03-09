@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using MeisterProPR.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
 
@@ -5,7 +7,7 @@ namespace MeisterProPR.Infrastructure.Configuration;
 
 public sealed class EnvVarClientRegistry : IClientRegistry
 {
-    private readonly HashSet<string> _keys;
+    private readonly Dictionary<string, Guid> _keys;
 
     // Use IConfiguration so values come from env vars, user-secrets, appsettings, etc.
     public EnvVarClientRegistry(IConfiguration configuration)
@@ -21,22 +23,30 @@ public sealed class EnvVarClientRegistry : IClientRegistry
             throw new InvalidOperationException("MEISTER_CLIENT_KEYS is not set or empty in configuration.");
         }
 
-        this._keys = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-            .ToHashSet(StringComparer.Ordinal);
-        if (this._keys.Count == 0)
+        var parsed = raw.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (parsed.Length == 0)
         {
             throw new InvalidOperationException("MEISTER_CLIENT_KEYS contains no valid keys.");
         }
+
+        this._keys = parsed.ToDictionary(k => k, DeterministicGuid, StringComparer.Ordinal);
     }
 
     public bool IsValidKey(string clientKey)
     {
-        return this._keys.Contains(clientKey);
+        return this._keys.ContainsKey(clientKey);
     }
 
     public Task<Guid?> GetClientIdByKeyAsync(string key, CancellationToken ct = default)
     {
-        // EnvVarClientRegistry has no UUID concept — keys are validated but have no stored UUID.
-        return Task.FromResult<Guid?>(null);
+        var id = this._keys.TryGetValue(key, out var guid) ? (Guid?)guid : null;
+        return Task.FromResult(id);
+    }
+
+    /// <summary>Derives a stable, deterministic UUID from the key string using MD5.</summary>
+    private static Guid DeterministicGuid(string key)
+    {
+        var hash = MD5.HashData(Encoding.UTF8.GetBytes(key));
+        return new Guid(hash);
     }
 }

@@ -61,7 +61,12 @@ public static class InfrastructureServiceExtensions
         {
             // PostgreSQL mode: EF Core + Npgsql
             services.AddDbContext<MeisterProPRDbContext>(options =>
-                options.UseNpgsql(dbConnectionString));
+                options
+                    .UseNpgsql(dbConnectionString)
+                    // EF tools 9.x generate snapshots that EF runtime 10.x flags as pending;
+                    // the schema is correct — suppress the spurious warning.
+                    .ConfigureWarnings(w => w.Ignore(
+                        Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning)));
 
             services.AddScoped<IJobRepository, PostgresJobRepository>();
             services.AddScoped<IClientRegistry, PostgresClientRegistry>();

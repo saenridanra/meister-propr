@@ -29,10 +29,10 @@ public sealed class InMemoryJobRepository : IJobRepository
         }
     }
 
-    public IReadOnlyList<ReviewJob> GetAllForClient(string clientKey)
+    public IReadOnlyList<ReviewJob> GetAllForClient(Guid clientId)
     {
         return this._jobs.Values
-            .Where(j => j.ClientKey == clientKey)
+            .Where(j => j.ClientId == clientId)
             .OrderByDescending(j => j.SubmittedAt)
             .ToList();
     }

@@ -27,11 +27,11 @@ public class ReviewJobTests
     }
 
     [Fact]
-    public void Constructor_NullClientKey_IsValid()
+    public void Constructor_NullClientId_IsValid()
     {
-        // T012: crawler-initiated jobs have no client key — null must be accepted
+        // T012: crawler-initiated jobs have no client — null must be accepted
         var job = new ReviewJob(Guid.NewGuid(), null, "https://dev.azure.com/org", "proj", "repo", 1, 1);
-        Assert.Null(job.ClientKey);
+        Assert.Null(job.ClientId);
         Assert.Equal(JobStatus.Pending, job.Status);
     }
 
@@ -46,10 +46,11 @@ public class ReviewJobTests
     public void Constructor_SetsAllFields()
     {
         var id = Guid.NewGuid();
-        var job = new ReviewJob(id, "key", "https://dev.azure.com/org", "proj", "repo", 42, 3);
+        var clientId = Guid.NewGuid();
+        var job = new ReviewJob(id, clientId, "https://dev.azure.com/org", "proj", "repo", 42, 3);
 
         Assert.Equal(id, job.Id);
-        Assert.Equal("key", job.ClientKey);
+        Assert.Equal(clientId, job.ClientId);
         Assert.Equal("https://dev.azure.com/org", job.OrganizationUrl);
         Assert.Equal("proj", job.ProjectId);
         Assert.Equal("repo", job.RepositoryId);
@@ -68,10 +69,11 @@ public class ReviewJobTests
     }
 
     [Fact]
-    public void Constructor_ThrowsOnEmptyClientKey()
+    public void Constructor_WithClientId_SetsClientId()
     {
-        // T012: empty (non-null) clientKey is still invalid — only null is allowed for crawler jobs
-        Assert.Throws<ArgumentException>(() => CreateJob(clientKey: ""));
+        var clientId = Guid.NewGuid();
+        var job = CreateJob(clientId: clientId);
+        Assert.Equal(clientId, job.ClientId);
     }
 
     [Fact]
@@ -111,10 +113,10 @@ public class ReviewJobTests
     }
 
     [Fact]
-    public void Constructor_WhitespaceClientKey_Throws()
+    public void Constructor_NullClientId_SetsClientIdToNull()
     {
-        // T012: whitespace is also invalid (same as empty)
-        Assert.Throws<ArgumentException>(() => CreateJob(clientKey: "   "));
+        var job = CreateJob(clientId: null);
+        Assert.Null(job.ClientId);
     }
 
     [Fact]
@@ -135,13 +137,13 @@ public class ReviewJobTests
 
     private static ReviewJob CreateJob(
         Guid? id = null,
-        string clientKey = "test-client",
+        Guid? clientId = null,
         string orgUrl = "https://dev.azure.com/myorg",
         string projectId = "proj-1",
         string repoId = "repo-1",
         int prId = 1,
         int iterationId = 1)
     {
-        return new ReviewJob(id ?? Guid.NewGuid(), clientKey, orgUrl, projectId, repoId, prId, iterationId);
+        return new ReviewJob(id ?? Guid.NewGuid(), clientId, orgUrl, projectId, repoId, prId, iterationId);
     }
 }

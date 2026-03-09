@@ -16,10 +16,10 @@ public interface IJobRepository
     /// <returns>True if the status was successfully updated; otherwise, false.</returns>
     bool TryTransition(Guid id, JobStatus from, JobStatus to);
 
-    /// <summary>All jobs for a client key, newest first.</summary>
-    /// <param name="clientKey">The client key to filter jobs by.</param>
-    /// <returns>List of all review jobs for the specified client key.</returns>
-    IReadOnlyList<ReviewJob> GetAllForClient(string clientKey);
+    /// <summary>All jobs for a client, newest first.</summary>
+    /// <param name="clientId">The client identifier to filter jobs by.</param>
+    /// <returns>List of all review jobs for the specified client.</returns>
+    IReadOnlyList<ReviewJob> GetAllForClient(Guid clientId);
 
     /// <summary>Returns all jobs with Status == Pending, oldest first.</summary>
     /// <returns>List of pending review jobs.</returns>

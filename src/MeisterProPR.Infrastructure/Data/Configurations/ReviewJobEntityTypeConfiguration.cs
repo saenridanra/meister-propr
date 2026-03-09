@@ -15,8 +15,8 @@ internal sealed class ReviewJobEntityTypeConfiguration : IEntityTypeConfiguratio
         builder.HasKey(j => j.Id);
         builder.Property(j => j.Id).HasColumnName("id").ValueGeneratedNever();
 
-        builder.Property(j => j.ClientKey)
-            .HasColumnName("client_key")
+        builder.Property(j => j.ClientId)
+            .HasColumnName("client_id")
             .IsRequired(false);
 
         builder.Property(j => j.OrganizationUrl)
@@ -68,7 +68,7 @@ internal sealed class ReviewJobEntityTypeConfiguration : IEntityTypeConfiguratio
                 v => v == null ? null : JsonSerializer.Deserialize<ReviewResult>(v, (JsonSerializerOptions?)null));
 
         builder.HasIndex(j => j.Status).HasDatabaseName("ix_review_jobs_status");
-        builder.HasIndex(j => j.ClientKey).HasDatabaseName("ix_review_jobs_client_key");
+        builder.HasIndex(j => j.ClientId).HasDatabaseName("ix_review_jobs_client_id");
         builder.HasIndex(j => new { j.OrganizationUrl, j.ProjectId, j.RepositoryId, j.PullRequestId, j.IterationId })
             .HasDatabaseName("ix_review_jobs_pr_identity");
     }

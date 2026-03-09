@@ -13,7 +13,7 @@ public class ReviewJobWorkerTests
 {
     private static ReviewJob CreateJob(int prId = 1)
     {
-        return new ReviewJob(Guid.NewGuid(), "test-client", "https://dev.azure.com/org", "proj", "repo", prId, 1);
+        return new ReviewJob(Guid.NewGuid(), Guid.NewGuid(), "https://dev.azure.com/org", "proj", "repo", prId, 1);
     }
 
     private static IServiceScopeFactory CreateScopeFactory(Action<IServiceProvider>? configureServices = null)

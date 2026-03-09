@@ -32,8 +32,7 @@ public sealed class AdoAssignedPrFetcherTests
             new Uri("https://dev.azure.com/testorg"),
             new VssCredentials());
 
-        gitClient.GetPullRequestsAsync(
-                Arg.Any<string>(),
+        gitClient.GetPullRequestsByProjectAsync(
                 Arg.Any<string>(),
                 Arg.Any<GitPullRequestSearchCriteria>(),
                 Arg.Any<int?>(),
@@ -59,8 +58,7 @@ public sealed class AdoAssignedPrFetcherTests
             new Uri("https://dev.azure.com/testorg"),
             new VssCredentials());
 
-        gitClient.GetPullRequestsAsync(
-                Arg.Any<string>(),
+        gitClient.GetPullRequestsByProjectAsync(
                 Arg.Any<string>(),
                 Arg.Any<GitPullRequestSearchCriteria>(),
                 Arg.Any<int?>(),
@@ -112,8 +110,7 @@ public sealed class AdoAssignedPrFetcherTests
             new Uri("https://dev.azure.com/testorg"),
             new VssCredentials());
 
-        gitClient.GetPullRequestsAsync(
-                Arg.Any<string>(),
+        gitClient.GetPullRequestsByProjectAsync(
                 Arg.Any<string>(),
                 Arg.Any<GitPullRequestSearchCriteria>(),
                 Arg.Any<int?>(),
@@ -156,8 +153,7 @@ public sealed class AdoAssignedPrFetcherTests
             new Uri("https://dev.azure.com/testorg"),
             new VssCredentials());
 
-        gitClient.GetPullRequestsAsync(
-                Arg.Any<string>(),
+        gitClient.GetPullRequestsByProjectAsync(
                 Arg.Any<string>(),
                 Arg.Any<GitPullRequestSearchCriteria>(),
                 Arg.Any<int?>(),
@@ -208,8 +204,7 @@ public sealed class AdoAssignedPrFetcherTests
             new Uri("https://dev.azure.com/testorg"),
             new VssCredentials());
 
-        gitClient.GetPullRequestsAsync(
-                Arg.Any<string>(),
+        gitClient.GetPullRequestsByProjectAsync(
                 Arg.Any<string>(),
                 Arg.Any<GitPullRequestSearchCriteria>(),
                 Arg.Any<int?>(),
@@ -223,9 +218,8 @@ public sealed class AdoAssignedPrFetcherTests
         await sut.GetAssignedOpenPullRequestsAsync(DefaultConfig);
 
         await gitClient.Received(1)
-            .GetPullRequestsAsync(
+            .GetPullRequestsByProjectAsync(
                 Arg.Is(DefaultConfig.ProjectId),
-                Arg.Any<string>(),
                 Arg.Is<GitPullRequestSearchCriteria>(c =>
                     c.ReviewerId == DefaultConfig.ReviewerId &&
                     c.Status == PullRequestStatus.Active),

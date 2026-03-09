@@ -185,13 +185,15 @@ public sealed class PostgresJobRepositoryTests : IAsyncLifetime
     [Fact]
     public void GetAllForClient_ReturnsOnlyMatchingClientJobs()
     {
-        this._repo.Add(MakeJob("client-a", prId: 1));
-        this._repo.Add(MakeJob("client-b", prId: 2));
-        this._repo.Add(MakeJob("client-a", prId: 3));
+        var clientA = Guid.NewGuid();
+        var clientB = Guid.NewGuid();
+        this._repo.Add(MakeJob(clientA, prId: 1));
+        this._repo.Add(MakeJob(clientB, prId: 2));
+        this._repo.Add(MakeJob(clientA, prId: 3));
 
-        var result = this._repo.GetAllForClient("client-a");
+        var result = this._repo.GetAllForClient(clientA);
         Assert.Equal(2, result.Count);
-        Assert.All(result, j => Assert.Equal("client-a", j.ClientKey));
+        Assert.All(result, j => Assert.Equal(clientA, j.ClientId));
     }
 
     [Fact]
@@ -282,13 +284,13 @@ public sealed class PostgresJobRepositoryTests : IAsyncLifetime
     }
 
     private static ReviewJob MakeJob(
-        string? clientKey = "client-key-abc",
+        Guid? clientId = null,
         string orgUrl = "https://dev.azure.com/org",
         string projectId = "proj",
         string repoId = "repo",
         int prId = 1,
         int iterationId = 1)
     {
-        return new ReviewJob(Guid.NewGuid(), clientKey, orgUrl, projectId, repoId, prId, iterationId);
+        return new ReviewJob(Guid.NewGuid(), clientId ?? Guid.NewGuid(), orgUrl, projectId, repoId, prId, iterationId);
     }
 }

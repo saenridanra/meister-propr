@@ -258,7 +258,7 @@ public class ReviewOrchestrationServiceTests
 
     private static ReviewJob CreateJob()
     {
-        return new ReviewJob(Guid.NewGuid(), "test-client", "https://dev.azure.com/org", "proj", "repo", 1, 1);
+        return new ReviewJob(Guid.NewGuid(), Guid.NewGuid(), "https://dev.azure.com/org", "proj", "repo", 1, 1);
     }
 
     private static ReviewResult CreateReviewResult()

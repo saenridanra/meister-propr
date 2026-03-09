@@ -40,10 +40,10 @@ public sealed class PostgresJobRepository(MeisterProPRDbContext dbContext) : IJo
     }
 
     /// <inheritdoc />
-    public IReadOnlyList<ReviewJob> GetAllForClient(string clientKey)
+    public IReadOnlyList<ReviewJob> GetAllForClient(Guid clientId)
     {
         return dbContext.ReviewJobs
-            .Where(j => j.ClientKey == clientKey)
+            .Where(j => j.ClientId == clientId)
             .OrderByDescending(j => j.SubmittedAt)
             .ToList();
     }

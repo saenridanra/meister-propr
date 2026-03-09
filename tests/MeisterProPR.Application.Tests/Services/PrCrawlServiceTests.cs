@@ -106,13 +106,13 @@ public sealed class PrCrawlServiceTests
         // Act
         await this._sut.CrawlAsync();
 
-        // Assert: Add was called exactly once
+        // Assert: Add was called exactly once with the config's ClientId
         this._jobs.Received(1)
             .Add(
                 Arg.Is<ReviewJob>(j =>
                     j.PullRequestId == 42 &&
                     j.IterationId == 1 &&
-                    j.ClientKey == null));
+                    j.ClientId == DefaultConfig.ClientId));
     }
 
     [Fact]

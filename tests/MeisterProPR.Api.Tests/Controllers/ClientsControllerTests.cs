@@ -190,7 +190,7 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
             {
                 organizationUrl = "https://dev.azure.com/myorg",
                 projectId = "MyProject",
-                reviewerId = Guid.NewGuid(),
+                reviewerDisplayName = "Test Reviewer",
                 crawlIntervalSeconds = 60,
             });
 
@@ -211,7 +211,7 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
             {
                 organizationUrl = "https://dev.azure.com/org",
                 projectId = "proj",
-                reviewerId = Guid.NewGuid(),
+                reviewerDisplayName = "Test Reviewer",
                 crawlIntervalSeconds = 60,
             });
 
@@ -317,6 +317,13 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
                         Arg.Any<CancellationToken>())
                     .Returns(Task.FromResult<Guid?>(null));
                 services.AddSingleton(clientRegistry);
+
+                // Provide a stub IIdentityResolver that returns one identity for any display name.
+                var identityResolver = Substitute.For<IIdentityResolver>();
+                identityResolver.ResolveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+                    .Returns(Task.FromResult<IReadOnlyList<ResolvedIdentity>>(
+                        [new ResolvedIdentity(Guid.NewGuid(), "Test Reviewer")]));
+                services.AddSingleton(identityResolver);
             });
         }
     }
