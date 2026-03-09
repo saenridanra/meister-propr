@@ -76,6 +76,19 @@ public sealed class PostgresCrawlConfigurationRepository(MeisterProPRDbContext d
     }
 
     /// <inheritdoc />
+    public async Task<bool> DeleteAsync(Guid configId, Guid clientId, CancellationToken ct = default)
+    {
+        var record = await dbContext.CrawlConfigurations
+            .FirstOrDefaultAsync(c => c.Id == configId && c.ClientId == clientId, ct);
+        if (record is null)
+            return false;
+
+        dbContext.CrawlConfigurations.Remove(record);
+        await dbContext.SaveChangesAsync(ct);
+        return true;
+    }
+
+    /// <inheritdoc />
     public async Task<IReadOnlyList<CrawlConfigurationDto>> GetByClientAsync(
         Guid clientId,
         CancellationToken ct = default)

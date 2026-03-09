@@ -94,14 +94,18 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IPullRequestFetcher, StubPullRequestFetcher>();
             services.AddScoped<IAdoCommentPoster, NoOpAdoCommentPoster>();
             services.AddScoped<IAssignedPullRequestFetcher, StubAssignedPrFetcher>();
+            services.AddScoped<IIdentityResolver, StubIdentityResolver>();
         }
         else
         {
-            services.AddSingleton<VssConnectionFactory>(_ =>
-                new VssConnectionFactory(ResolveCredential(configuration)));
+            var credential = ResolveCredential(configuration);
+            services.AddSingleton<VssConnectionFactory>(_ => new VssConnectionFactory(credential));
             services.AddScoped<IPullRequestFetcher, AdoPullRequestFetcher>();
             services.AddScoped<IAdoCommentPoster, AdoCommentPoster>();
             services.AddScoped<IAssignedPullRequestFetcher, AdoAssignedPrFetcher>();
+            services.AddHttpClient("AdoIdentity");
+            services.AddScoped<IIdentityResolver>(sp =>
+                new AdoIdentityResolver(credential, sp.GetRequiredService<IHttpClientFactory>()));
         }
 
         // AI review (provider-agnostic via IChatClient)

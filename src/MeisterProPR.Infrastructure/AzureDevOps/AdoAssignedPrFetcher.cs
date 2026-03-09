@@ -36,10 +36,8 @@ public sealed class AdoAssignedPrFetcher(
             Status = PullRequestStatus.Active,
         };
 
-        // null repositoryId = search all repos in the project
-        var prs = await gitClient.GetPullRequestsAsync(
+        var prs = await gitClient.GetPullRequestsByProjectAsync(
             config.ProjectId,
-            null!,
             criteria,
             top: 200,
             userState: null,

@@ -12,9 +12,10 @@ public sealed class ClientKeyMiddleware(RequestDelegate next, IClientRegistry cl
     /// <summary>Validates X-Client-Key header and stores it in HttpContext.Items when valid.</summary>
     public async Task InvokeAsync(HttpContext context)
     {
-        // /healthz and /metrics bypass auth
+        // /healthz, /metrics, and admin-authenticated requests bypass client key validation
         if (context.Request.Path.StartsWithSegments("/healthz") ||
-            context.Request.Path.StartsWithSegments("/metrics"))
+            context.Request.Path.StartsWithSegments("/metrics") ||
+            context.Items["IsAdmin"] is true)
         {
             await next(context);
             return;

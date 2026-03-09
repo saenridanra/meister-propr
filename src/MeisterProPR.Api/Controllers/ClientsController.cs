@@ -11,7 +11,8 @@ namespace MeisterProPR.Api.Controllers;
 public sealed class ClientsController(
     MeisterProPRDbContext dbContext,
     IClientRegistry clientRegistry,
-    ICrawlConfigurationRepository crawlConfigs) : ControllerBase
+    ICrawlConfigurationRepository crawlConfigs,
+    IIdentityResolver identityResolver) : ControllerBase
 {
     // ── Client-Scoped: Crawl Configurations ──────────────────────────────────
 
@@ -56,25 +57,33 @@ public sealed class ClientsController(
         }
 
         if (string.IsNullOrWhiteSpace(request.OrganizationUrl))
-        {
             return this.BadRequest(new { error = "OrganizationUrl is required." });
-        }
 
         if (string.IsNullOrWhiteSpace(request.ProjectId))
-        {
             return this.BadRequest(new { error = "ProjectId is required." });
-        }
+
+        if (string.IsNullOrWhiteSpace(request.ReviewerDisplayName))
+            return this.BadRequest(new { error = "ReviewerDisplayName is required." });
 
         if (request.CrawlIntervalSeconds < 10)
-        {
             return this.BadRequest(new { error = "CrawlIntervalSeconds must be >= 10." });
-        }
+
+        var identityMatches = await identityResolver.ResolveAsync(request.OrganizationUrl, request.ReviewerDisplayName, ct);
+        if (identityMatches.Count == 0)
+            return this.BadRequest(new { error = $"No ADO identity found with display name '{request.ReviewerDisplayName}'." });
+
+        if (identityMatches.Count > 1)
+            return this.BadRequest(new
+            {
+                error = $"Multiple ADO identities match '{request.ReviewerDisplayName}'. Provide a more specific display name.",
+                matches = identityMatches.Select(m => new { m.Id, m.DisplayName }),
+            });
 
         var config = await crawlConfigs.AddAsync(
             clientId,
             request.OrganizationUrl,
             request.ProjectId,
-            request.ReviewerId,
+            identityMatches[0].Id,
             request.CrawlIntervalSeconds,
             ct);
 
@@ -237,6 +246,31 @@ public sealed class ClientsController(
     }
 
     /// <summary>
+    ///     Deletes a client and all its crawl configurations. Requires <c>X-Admin-Key</c>.
+    /// </summary>
+    /// <param name="clientId">Client identifier.</param>
+    /// <response code="204">Client deleted.</response>
+    /// <response code="401">Missing or invalid <c>X-Admin-Key</c>.</response>
+    /// <response code="404">Client not found.</response>
+    [HttpDelete("clients/{clientId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteClient(Guid clientId)
+    {
+        if (this.HttpContext.Items["IsAdmin"] is not true)
+            return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
+
+        var client = await dbContext.Clients.FindAsync(clientId);
+        if (client is null)
+            return this.NotFound();
+
+        dbContext.Clients.Remove(client);
+        await dbContext.SaveChangesAsync();
+        return this.NoContent();
+    }
+
+    /// <summary>
     ///     Enables or disables a client. Requires <c>X-Admin-Key</c>.
     /// </summary>
     /// <param name="clientId">Client identifier.</param>
@@ -265,6 +299,41 @@ public sealed class ClientsController(
         await dbContext.SaveChangesAsync();
 
         return this.Ok(new ClientResponse(client.Id, client.DisplayName, client.IsActive, client.CreatedAt));
+    }
+
+    /// <summary>
+    ///     Deletes a crawl configuration. Requires <c>X-Client-Key</c> that owns the client.
+    /// </summary>
+    /// <param name="clientId">Client identifier.</param>
+    /// <param name="configId">Configuration identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="204">Configuration deleted.</response>
+    /// <response code="401">Missing or invalid <c>X-Client-Key</c>.</response>
+    /// <response code="403">Caller does not own this client.</response>
+    /// <response code="404">Configuration not found.</response>
+    [HttpDelete("clients/{clientId:guid}/crawl-configurations/{configId:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> DeleteCrawlConfiguration(
+        Guid clientId,
+        Guid configId,
+        CancellationToken ct = default)
+    {
+        var callerKey = this.HttpContext.Items["ClientKey"] as string;
+        if (string.IsNullOrWhiteSpace(callerKey))
+            return this.Unauthorized(new { error = "Valid X-Client-Key required." });
+
+        var callerId = await clientRegistry.GetClientIdByKeyAsync(callerKey, ct);
+        if (callerId is null || callerId != clientId)
+            return this.StatusCode(StatusCodes.Status403Forbidden, new { error = "Caller does not own this client." });
+
+        var deleted = await crawlConfigs.DeleteAsync(configId, clientId, ct);
+        if (!deleted)
+            return this.NotFound();
+
+        return this.NoContent();
     }
 
     /// <summary>
@@ -345,7 +414,7 @@ public sealed class ClientsController(
     public sealed record CreateCrawlConfigRequest(
         string OrganizationUrl,
         string ProjectId,
-        Guid ReviewerId,
+        string ReviewerDisplayName,
         int CrawlIntervalSeconds = 60);
 
     /// <summary>Request body for patching a client's active status.</summary>

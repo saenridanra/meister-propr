@@ -22,4 +22,7 @@ public interface ICrawlConfigurationRepository
 
     /// <summary>Returns all crawl configurations for a specific client.</summary>
     Task<IReadOnlyList<CrawlConfigurationDto>> GetByClientAsync(Guid clientId, CancellationToken ct = default);
+
+    /// <summary>Deletes a crawl configuration. Returns false if not found or not owned by clientId.</summary>
+    Task<bool> DeleteAsync(Guid configId, Guid clientId, CancellationToken ct = default);
 }
