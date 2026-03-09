@@ -1,76 +1,903 @@
 {
-  "openapi": "3.0.3",
+  "openapi": "3.0.4",
   "info": {
-    "title": "Meister ProPR",
-    "version": "1.0.0",
-    "description": "AI-powered pull request review backend for Azure DevOps."
+    "title": "MeisterProPR.Api, Version=1.0.0.0, Culture=neutral, PublicKeyToken=null",
+    "version": "1.0"
   },
   "paths": {
-    "/reviews": {
+    "/clients": {
       "post": {
-        "operationId": "SubmitReview",
-        "summary": "Submit a pull request for AI review",
-        "description": "Enqueues a background review job. The backend fetches the changed files directly from ADO using the supplied token, runs the AI review, and posts comments back to the pull request on the specified iteration.",
-        "security": [
-          {
-            "clientKey": []
-          }
+        "tags": [
+          "Clients"
         ],
-        "parameters": [
-          {
-            "name": "X-Ado-Token",
-            "in": "header",
-            "required": true,
-            "description": "ADO personal access token or OAuth token used solely to verify that the requesting user is an authenticated member of the configured ADO organisation. The backend uses its own managed identity for all ADO API operations (file fetching, comment posting). This token is never forwarded, stored, cached beyond the request lifetime, or included in any response.",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
+        "summary": "Registers a new client. Requires `X-Admin-Key`.",
         "requestBody": {
-          "required": true,
+          "description": "Client registration details.",
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ReviewRequest"
+                "$ref": "#/components/schemas/CreateClientRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClientRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateClientRequest"
               }
             }
           }
         },
         "responses": {
-          "202": {
-            "description": "Review job accepted and queued.",
+          "201": {
+            "description": "Client registered.",
             "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewJob"
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
           },
           "401": {
-            "description": "Invalid or missing client key."
+            "description": "Missing or invalid `X-Admin-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
-          "422": {
-            "description": "Request validation failed."
+          "409": {
+            "description": "A client with that key already exists.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       },
       "get": {
-        "operationId": "ListReviews",
-        "summary": "List review jobs for this client",
-        "description": "Returns all review jobs submitted under this client key, newest first.",
-        "security": [
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Lists all registered clients. Requires `X-Admin-Key`. Client keys are never returned.",
+        "responses": {
+          "200": {
+            "description": "List of clients.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClientResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients/{clientId}": {
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Gets a single client by ID. Requires `X-Admin-Key`.",
+        "parameters": [
           {
-            "clientKey": []
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "Client found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Enables or disables a client. Requires `X-Admin-Key`.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Update request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchClientRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchClientRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchClientRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Client updated.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClientResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients/{clientId}/crawl-configurations": {
+      "post": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Adds a crawl configuration for the specified client. Requires `X-Client-Key` that owns the client.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Crawl configuration details.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateCrawlConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Configuration created.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Validation failure.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Client-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this client.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Client not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Lists crawl configurations for the specified client. Requires `X-Client-Key` that owns the client.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of crawl configurations.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrawlConfigResponse"
+                  }
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrawlConfigResponse"
+                  }
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CrawlConfigResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Client-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this client.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/clients/{clientId}/crawl-configurations/{configId}": {
+      "patch": {
+        "tags": [
+          "Clients"
+        ],
+        "summary": "Enables or disables a crawl configuration. Requires `X-Client-Key` that owns the client.",
+        "parameters": [
+          {
+            "name": "clientId",
+            "in": "path",
+            "description": "Client identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "configId",
+            "in": "path",
+            "description": "Configuration identifier.",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "description": "Update request.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchCrawlConfigRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchCrawlConfigRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/PatchCrawlConfigRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Configuration updated.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CrawlConfigResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Client-Key`.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller does not own this client.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Configuration not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/jobs": {
+      "get": {
+        "tags": [
+          "Jobs"
+        ],
+        "summary": "Returns all review jobs across all clients, newest first. Requires `X-Admin-Key`.",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "description": "Maximum number of items to return (1–1000, default 100).",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 100
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "description": "Number of items to skip for pagination (default 0).",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Optional status filter: Pending, Processing, Completed, or Failed.",
+            "schema": {
+              "$ref": "#/components/schemas/JobStatus"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Jobs returned.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JobListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Missing or invalid `X-Admin-Key` header.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Reviews/{jobId}": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "Get the status and result of a review job.",
         "parameters": [
           {
             "name": "X-Ado-Token",
             "in": "header",
+            "description": "ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "jobId",
+            "in": "path",
+            "description": "The job identifier returned from POST /reviews.",
             "required": true,
-            "description": "ADO personal access token or OAuth token used solely to verify that the requesting user is an authenticated member of the configured ADO organisation. The backend uses its own managed identity for all ADO API operations (file fetching, comment posting). This token is never forwarded, stored, cached beyond the request lifetime, or included in any response.",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Job status and, once completed, its result.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewStatusResponse"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewStatusResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Invalid or missing client key, or invalid ADO token.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Job not found.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/Reviews": {
+      "get": {
+        "tags": [
+          "Reviews"
+        ],
+        "summary": "List all review jobs for the current client.",
+        "parameters": [
+          {
+            "name": "X-Ado-Token",
+            "in": "header",
+            "description": "ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.",
             "schema": {
               "type": "string"
             }
@@ -78,9 +905,25 @@
         ],
         "responses": {
           "200": {
-            "description": "List of review jobs.",
+            "description": "List of review jobs, newest first.",
             "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewListItem"
+                  }
+                }
+              },
               "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ReviewListItem"
+                  }
+                }
+              },
+              "text/json": {
                 "schema": {
                   "type": "array",
                   "items": {
@@ -91,169 +934,436 @@
             }
           },
           "401": {
-            "description": "Invalid or missing client key."
+            "description": "Invalid or missing client key, or invalid ADO token.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
-      }
-    },
-    "/reviews/{jobId}": {
-      "get": {
-        "operationId": "GetReview",
-        "summary": "Get the status and result of a review job",
-        "security": [
-          {
-            "clientKey": []
-          }
+      },
+      "post": {
+        "tags": [
+          "Reviews"
         ],
+        "summary": "Submit a pull request for AI review.",
         "parameters": [
           {
             "name": "X-Ado-Token",
             "in": "header",
-            "required": true,
-            "description": "ADO personal access token or OAuth token used solely to verify that the requesting user is an authenticated member of the configured ADO organisation. The backend uses its own managed identity for all ADO API operations (file fetching, comment posting). This token is never forwarded, stored, cached beyond the request lifetime, or included in any response.",
+            "description": "ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.",
             "schema": {
               "type": "string"
             }
-          },
-          {
-            "name": "jobId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
           }
         ],
+        "requestBody": {
+          "description": "The PR details to review.",
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            },
+            "text/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            },
+            "application/*+json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewRequest"
+              }
+            }
+          }
+        },
         "responses": {
-          "200": {
-            "description": "Review job status and, once completed, its result.",
+          "202": {
+            "description": "Review job accepted. Poll the returned jobId for status.",
             "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewJobResponse"
+                }
+              },
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReviewStatusResponse"
+                  "$ref": "#/components/schemas/ReviewJobResponse"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewJobResponse"
                 }
               }
             }
           },
           "401": {
-            "description": "Invalid or missing client key."
+            "description": "Invalid or missing client key, or invalid ADO token.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
-          "404": {
-            "description": "Job not found."
+          "422": {
+            "description": "Request validation failed.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              },
+              "text/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
     }
   },
   "components": {
-    "securitySchemes": {
-      "clientKey": {
-        "type": "apiKey",
-        "in": "header",
-        "name": "X-Client-Key",
-        "description": "Client key issued by the backend operator to authenticate the ADO organisation."
-      }
-    },
     "schemas": {
-      "ReviewRequest": {
+      "ClientResponse": {
         "type": "object",
-        "required": [
-          "organizationUrl",
-          "projectId",
-          "repositoryId",
-          "pullRequestId",
-          "iterationId"
-        ],
         "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Client response (key is never included)."
+      },
+      "CommentSeverity": {
+        "enum": [
+          "info",
+          "warning",
+          "error",
+          "suggestion"
+        ],
+        "type": "string",
+        "description": "Severity level of a review comment."
+      },
+      "CrawlConfigResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientId": {
+            "type": "string",
+            "format": "uuid"
+          },
           "organizationUrl": {
             "type": "string",
-            "format": "uri",
-            "description": "ADO organisation URL.",
-            "example": "https://dev.azure.com/myorg"
+            "nullable": true
           },
           "projectId": {
             "type": "string",
-            "description": "ADO project ID or name.",
-            "example": "my-project"
+            "nullable": true
+          },
+          "reviewerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "crawlIntervalSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Crawl configuration response."
+      },
+      "CreateClientRequest": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "nullable": true
+          },
+          "displayName": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request body for creating a client."
+      },
+      "CreateCrawlConfigRequest": {
+        "type": "object",
+        "properties": {
+          "organizationUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "reviewerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "crawlIntervalSeconds": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request body for creating a crawl configuration."
+      },
+      "JobListItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "clientId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true
+          },
+          "organizationUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
           },
           "repositoryId": {
             "type": "string",
-            "description": "ADO repository ID.",
-            "example": "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+            "nullable": true
           },
           "pullRequestId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "Pull request ID.",
-            "example": 42
+            "format": "int32"
           },
           "iterationId": {
             "type": "integer",
-            "minimum": 1,
-            "description": "PR iteration (change version) to review and post comments on.",
-            "example": 3
-          }
-        }
-      },
-      "ReviewJob": {
-        "type": "object",
-        "required": [
-          "jobId"
-        ],
-        "properties": {
-          "jobId": {
+            "format": "int32"
+          },
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "submittedAt": {
             "type": "string",
-            "format": "uuid",
-            "description": "Identifier for polling job status."
+            "format": "date-time"
+          },
+          "processingStartedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "resultSummary": {
+            "type": "string",
+            "nullable": true
+          },
+          "errorMessage": {
+            "type": "string",
+            "nullable": true
           }
-        }
+        },
+        "additionalProperties": false,
+        "description": "Single job item in the list response."
       },
-      "ReviewJobStatus": {
-        "type": "string",
+      "JobListResponse": {
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/JobListItem"
+            },
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "Response for the job list endpoint."
+      },
+      "JobStatus": {
         "enum": [
           "pending",
           "processing",
           "completed",
           "failed"
         ],
-        "description": "Current processing state of the review job."
+        "type": "string",
+        "description": "Status of a review job."
+      },
+      "PatchClientRequest": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request body for patching a client's active status."
+      },
+      "PatchCrawlConfigRequest": {
+        "type": "object",
+        "properties": {
+          "isActive": {
+            "type": "boolean"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request body for patching a crawl configuration's active status."
+      },
+      "ProblemDetails": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "nullable": true
+          },
+          "title": {
+            "type": "string",
+            "nullable": true
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "detail": {
+            "type": "string",
+            "nullable": true
+          },
+          "instance": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": {}
+      },
+      "ReviewCommentDto": {
+        "type": "object",
+        "properties": {
+          "filePath": {
+            "type": "string",
+            "nullable": true
+          },
+          "lineNumber": {
+            "type": "integer",
+            "format": "int32",
+            "nullable": true
+          },
+          "severity": {
+            "$ref": "#/components/schemas/CommentSeverity"
+          },
+          "message": {
+            "type": "string",
+            "nullable": true
+          }
+        },
+        "additionalProperties": false,
+        "description": "DTO for a single review comment."
+      },
+      "ReviewJobResponse": {
+        "type": "object",
+        "properties": {
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Response returned when a review job is accepted."
       },
       "ReviewListItem": {
         "type": "object",
-        "required": [
-          "jobId",
-          "status",
-          "organizationUrl",
-          "projectId",
-          "repositoryId",
-          "pullRequestId",
-          "iterationId",
-          "submittedAt"
-        ],
         "properties": {
           "jobId": {
             "type": "string",
             "format": "uuid"
           },
           "status": {
-            "$ref": "#/components/schemas/ReviewJobStatus"
+            "$ref": "#/components/schemas/JobStatus"
           },
           "organizationUrl": {
             "type": "string",
-            "format": "uri"
+            "nullable": true
           },
           "projectId": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "repositoryId": {
-            "type": "string"
+            "type": "string",
+            "nullable": true
           },
           "pullRequestId": {
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           },
           "iterationId": {
-            "type": "integer"
+            "type": "integer",
+            "format": "int32"
           },
           "submittedAt": {
             "type": "string",
@@ -264,84 +1374,116 @@
             "format": "date-time",
             "nullable": true
           }
-        }
+        },
+        "additionalProperties": false,
+        "description": "List item for a review job."
       },
-      "ReviewStatusResponse": {
-        "allOf": [
-          {
-            "$ref": "#/components/schemas/ReviewListItem"
-          },
-          {
-            "type": "object",
-            "properties": {
-              "result": {
-                "nullable": true,
-                "allOf": [
-                  {
-                    "$ref": "#/components/schemas/ReviewResult"
-                  }
-                ],
-                "description": "Present when status is 'completed'."
-              },
-              "error": {
-                "type": "string",
-                "nullable": true,
-                "description": "Human-readable error message. Present when status is 'failed'."
-              }
-            }
-          }
-        ]
-      },
-      "ReviewResult": {
+      "ReviewRequest": {
         "type": "object",
-        "required": [
-          "summary",
-          "comments"
-        ],
+        "properties": {
+          "organizationUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryId": {
+            "type": "string",
+            "nullable": true
+          },
+          "pullRequestId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iterationId": {
+            "type": "integer",
+            "format": "int32"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Request payload to submit a pull request for review."
+      },
+      "ReviewResultDto": {
+        "type": "object",
         "properties": {
           "summary": {
             "type": "string",
-            "description": "Overall narrative of the AI review."
+            "nullable": true
           },
           "comments": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/ReviewComment"
-            }
+              "$ref": "#/components/schemas/ReviewCommentDto"
+            },
+            "nullable": true
           }
-        }
+        },
+        "additionalProperties": false,
+        "description": "DTO representing the textual review result and comments."
       },
-      "ReviewComment": {
+      "ReviewStatusResponse": {
         "type": "object",
-        "required": [
-          "severity",
-          "message"
-        ],
         "properties": {
-          "filePath": {
+          "jobId": {
             "type": "string",
-            "nullable": true,
-            "description": "File path the comment applies to. Null for general (PR-level) comments."
+            "format": "uuid"
           },
-          "lineNumber": {
+          "status": {
+            "$ref": "#/components/schemas/JobStatus"
+          },
+          "organizationUrl": {
+            "type": "string",
+            "nullable": true
+          },
+          "projectId": {
+            "type": "string",
+            "nullable": true
+          },
+          "repositoryId": {
+            "type": "string",
+            "nullable": true
+          },
+          "pullRequestId": {
             "type": "integer",
-            "nullable": true,
-            "description": "Line number within the file. Null if not line-specific."
+            "format": "int32"
           },
-          "severity": {
+          "iterationId": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "submittedAt": {
             "type": "string",
-            "enum": [
-              "info",
-              "warning",
-              "error",
-              "suggestion"
-            ]
+            "format": "date-time"
           },
-          "message": {
-            "type": "string"
+          "completedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          },
+          "result": {
+            "$ref": "#/components/schemas/ReviewResultDto"
+          },
+          "error": {
+            "type": "string",
+            "nullable": true
           }
-        }
+        },
+        "additionalProperties": false,
+        "description": "Detailed status response for a review job."
       }
     }
-  }
+  },
+  "tags": [
+    {
+      "name": "Clients"
+    },
+    {
+      "name": "Jobs"
+    },
+    {
+      "name": "Reviews"
+    }
+  ]
 }

@@ -1,6 +1,7 @@
 using MeisterProPR.Application.Interfaces;
 using MeisterProPR.Application.Services;
 using MeisterProPR.Domain.Entities;
+using MeisterProPR.Domain.Enums;
 using MeisterProPR.Domain.Interfaces;
 using MeisterProPR.Domain.ValueObjects;
 using Microsoft.Extensions.Logging;
@@ -11,31 +12,6 @@ namespace MeisterProPR.Application.Tests.Services;
 
 public class ReviewOrchestrationServiceTests
 {
-    private static ReviewJob CreateJob()
-    {
-        return new ReviewJob(Guid.NewGuid(), "test-client", "https://dev.azure.com/org", "proj", "repo", 1, 1);
-    }
-
-    private static PullRequest CreatePullRequest()
-    {
-        return new PullRequest(
-            "https://dev.azure.com/org",
-            "proj",
-            "repo",
-            1,
-            1,
-            "Test PR",
-            null,
-            "feature/x",
-            "main",
-            new List<ChangedFile>().AsReadOnly());
-    }
-
-    private static ReviewResult CreateReviewResult()
-    {
-        return new ReviewResult("Summary", new List<ReviewComment>().AsReadOnly());
-    }
-
     [Fact]
     public async Task ProcessAsync_AiException_TransitionsJobToFailed()
     {
@@ -143,6 +119,42 @@ public class ReviewOrchestrationServiceTests
         jobs.DidNotReceive().SetResult(Arg.Any<Guid>(), Arg.Any<ReviewResult>());
     }
 
+    // ── EC-002: PR abandoned/closed while Processing ──────────────────────────
+
+    [Theory]
+    [InlineData(PrStatus.Abandoned)]
+    [InlineData(PrStatus.Completed)]
+    public async Task ProcessAsync_PrNotActive_CallsSetFailedWithoutCallingAi(PrStatus status)
+    {
+        // Arrange
+        var jobs = Substitute.For<IJobRepository>();
+        var prFetcher = Substitute.For<IPullRequestFetcher>();
+        var aiCore = Substitute.For<IAiReviewCore>();
+        var commentPoster = Substitute.For<IAdoCommentPoster>();
+        var logger = Substitute.For<ILogger<ReviewOrchestrationService>>();
+
+        var job = CreateJob();
+        var closedPr = CreatePullRequest() with { Status = status };
+
+        prFetcher.FetchAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<CancellationToken>())
+            .Returns(closedPr);
+
+        var sut = new ReviewOrchestrationService(jobs, prFetcher, aiCore, commentPoster, logger);
+
+        // Act
+        await sut.ProcessAsync(job, CancellationToken.None);
+
+        // Assert: job is marked failed with the EC-002 message; AI is never called
+        jobs.Received(1).SetFailed(job.Id, Arg.Is<string>(m => m.Contains("closed or abandoned")));
+        await aiCore.DidNotReceiveWithAnyArgs().ReviewAsync(default!);
+    }
+
     [Fact]
     public async Task ProcessAsync_SuccessfulFlow_CallsCommentPosterWithCorrectParameters()
     {
@@ -227,5 +239,30 @@ public class ReviewOrchestrationServiceTests
                 result,
                 Arg.Any<CancellationToken>());
         jobs.DidNotReceive().SetFailed(Arg.Any<Guid>(), Arg.Any<string>());
+    }
+
+    private static PullRequest CreatePullRequest()
+    {
+        return new PullRequest(
+            "https://dev.azure.com/org",
+            "proj",
+            "repo",
+            1,
+            1,
+            "Test PR",
+            null,
+            "feature/x",
+            "main",
+            new List<ChangedFile>().AsReadOnly());
+    }
+
+    private static ReviewJob CreateJob()
+    {
+        return new ReviewJob(Guid.NewGuid(), Guid.NewGuid(), "https://dev.azure.com/org", "proj", "repo", 1, 1);
+    }
+
+    private static ReviewResult CreateReviewResult()
+    {
+        return new ReviewResult("Summary", new List<ReviewComment>().AsReadOnly());
     }
 }

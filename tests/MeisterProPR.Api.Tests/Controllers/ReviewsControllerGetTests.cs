@@ -131,6 +131,8 @@ public class ReviewsControllerGetTests(ReviewsControllerGetTests.GetReviewsFacto
             Environment.SetEnvironmentVariable("MEISTER_CLIENT_KEYS", "test-key-123");
             Environment.SetEnvironmentVariable("AI_ENDPOINT", "https://fake-ai.openai.azure.com/");
             Environment.SetEnvironmentVariable("AI_DEPLOYMENT", "gpt-4o");
+            // Skip real ADO token HTTP calls in tests — PassThroughAdoTokenValidator accepts any non-empty token.
+            Environment.SetEnvironmentVariable("ADO_SKIP_TOKEN_VALIDATION", "true");
         }
 
         private static void ReplaceService<T>(IServiceCollection services, T implementation) where T : class
@@ -149,7 +151,7 @@ public class ReviewsControllerGetTests(ReviewsControllerGetTests.GetReviewsFacto
             var repo = this._jobRepo ?? throw new InvalidOperationException("Factory not initialized");
             var job = new ReviewJob(
                 Guid.NewGuid(),
-                "test-key-123",
+                Guid.NewGuid(),
                 "https://dev.azure.com/org",
                 "proj",
                 "repo",
@@ -165,7 +167,7 @@ public class ReviewsControllerGetTests(ReviewsControllerGetTests.GetReviewsFacto
             var repo = this._jobRepo ?? throw new InvalidOperationException("Factory not initialized");
             var job = new ReviewJob(
                 Guid.NewGuid(),
-                "test-key-123",
+                Guid.NewGuid(),
                 "https://dev.azure.com/org",
                 "proj",
                 "repo",
@@ -182,16 +184,12 @@ public class ReviewsControllerGetTests(ReviewsControllerGetTests.GetReviewsFacto
 
             builder.ConfigureServices(services =>
             {
-                var adoValidator = Substitute.For<IAdoTokenValidator>();
-                adoValidator.IsValidAsync("valid-ado-token", Arg.Any<CancellationToken>())
-                    .Returns(true);
-                adoValidator.IsValidAsync(Arg.Is<string>(s => s != "valid-ado-token"), Arg.Any<CancellationToken>())
-                    .Returns(false);
-                // empty/null token (missing header) also returns false
-                adoValidator.IsValidAsync(null!, Arg.Any<CancellationToken>())
-                    .Returns(false);
+                var clientRegistry = Substitute.For<IClientRegistry>();
+                clientRegistry.IsValidKey(Arg.Any<string>()).Returns(true);
+                clientRegistry.GetClientIdByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                    .Returns(Guid.NewGuid());
 
-                ReplaceService(services, adoValidator);
+                ReplaceService(services, clientRegistry);
                 ReplaceService(services, Substitute.For<IPullRequestFetcher>());
                 ReplaceService(services, Substitute.For<IAdoCommentPoster>());
             });

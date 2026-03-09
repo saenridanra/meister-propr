@@ -13,7 +13,7 @@ public sealed class ReviewJob
     /// </summary>
     public ReviewJob(
         Guid id,
-        string clientKey,
+        Guid? clientId,
         string organizationUrl,
         string projectId,
         string repositoryId,
@@ -23,11 +23,6 @@ public sealed class ReviewJob
         if (id == Guid.Empty)
         {
             throw new ArgumentException("Id must not be empty.", nameof(id));
-        }
-
-        if (string.IsNullOrWhiteSpace(clientKey))
-        {
-            throw new ArgumentException("ClientKey required.", nameof(clientKey));
         }
 
         if (string.IsNullOrWhiteSpace(organizationUrl))
@@ -56,7 +51,7 @@ public sealed class ReviewJob
         }
 
         this.Id = id;
-        this.ClientKey = clientKey;
+        this.ClientId = clientId;
         this.OrganizationUrl = organizationUrl;
         this.ProjectId = projectId;
         this.RepositoryId = repositoryId;
@@ -67,9 +62,32 @@ public sealed class ReviewJob
     }
 
     /// <summary>
+    ///     When the job was submitted.
+    /// </summary>
+    public DateTimeOffset SubmittedAt { get; init; }
+
+    /// <summary>
+    ///     When the job completed, if available.
+    /// </summary>
+    public DateTimeOffset? CompletedAt { get; set; }
+
+    /// <summary>When the job began processing, if available.</summary>
+    public DateTimeOffset? ProcessingStartedAt { get; set; }
+
+    /// <summary>
     ///     Unique identifier for the review job.
     /// </summary>
     public Guid Id { get; init; }
+
+    /// <summary>
+    ///     Iteration identifier within the pull request.
+    /// </summary>
+    public int IterationId { get; init; }
+
+    /// <summary>
+    ///     Pull request identifier.
+    /// </summary>
+    public int PullRequestId { get; init; }
 
     /// <summary>
     ///     Current status of the job.
@@ -77,9 +95,9 @@ public sealed class ReviewJob
     public JobStatus Status { get; set; }
 
     /// <summary>
-    ///     Client key that submitted the job.
+    ///     Result of the review, if completed.
     /// </summary>
-    public string ClientKey { get; init; }
+    public ReviewResult? Result { get; set; }
 
     /// <summary>
     ///     Organization URL containing the repository.
@@ -97,29 +115,9 @@ public sealed class ReviewJob
     public string RepositoryId { get; init; }
 
     /// <summary>
-    ///     Pull request identifier.
+    ///     Client that owns this job. Null for legacy jobs without client tracking.
     /// </summary>
-    public int PullRequestId { get; init; }
-
-    /// <summary>
-    ///     Iteration identifier within the pull request.
-    /// </summary>
-    public int IterationId { get; init; }
-
-    /// <summary>
-    ///     When the job was submitted.
-    /// </summary>
-    public DateTimeOffset SubmittedAt { get; init; }
-
-    /// <summary>
-    ///     When the job completed, if available.
-    /// </summary>
-    public DateTimeOffset? CompletedAt { get; set; }
-
-    /// <summary>
-    ///     Result of the review, if completed.
-    /// </summary>
-    public ReviewResult? Result { get; set; }
+    public Guid? ClientId { get; init; }
 
     /// <summary>
     ///     Error message if the job failed.

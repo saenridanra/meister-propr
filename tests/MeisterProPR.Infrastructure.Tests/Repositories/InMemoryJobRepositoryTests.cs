@@ -7,15 +7,18 @@ namespace MeisterProPR.Infrastructure.Tests.Repositories;
 
 public class InMemoryJobRepositoryTests
 {
+    private static readonly Guid ClientA = Guid.NewGuid();
+    private static readonly Guid ClientB = Guid.NewGuid();
+
     private static ReviewJob CreateJob(
-        string clientKey = "client-a",
+        Guid? clientId = null,
         string orgUrl = "https://dev.azure.com/org",
         string projectId = "proj",
         string repoId = "repo",
         int prId = 1,
         int iterationId = 1)
     {
-        return new ReviewJob(Guid.NewGuid(), clientKey, orgUrl, projectId, repoId, prId, iterationId);
+        return new ReviewJob(Guid.NewGuid(), clientId ?? ClientA, orgUrl, projectId, repoId, prId, iterationId);
     }
 
     [Fact]
@@ -92,11 +95,11 @@ public class InMemoryJobRepositoryTests
     {
         var repo = new InMemoryJobRepository();
         repo.Add(CreateJob());
-        repo.Add(CreateJob("client-b", prId: 2));
+        repo.Add(CreateJob(ClientB, prId: 2));
 
-        var jobs = repo.GetAllForClient("client-a");
+        var jobs = repo.GetAllForClient(ClientA);
         Assert.Single(jobs);
-        Assert.All(jobs, j => Assert.Equal("client-a", j.ClientKey));
+        Assert.All(jobs, j => Assert.Equal(ClientA, j.ClientId));
     }
 
     [Fact]
@@ -113,7 +116,7 @@ public class InMemoryJobRepositoryTests
         repo.Add(job2);
         repo.Add(job3);
 
-        var jobs = repo.GetAllForClient("client-a");
+        var jobs = repo.GetAllForClient(ClientA);
 
         Assert.Equal(3, jobs.Count);
         // Verify descending order (newest first)

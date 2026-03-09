@@ -78,7 +78,7 @@ public class HealthCheckTests(HealthCheckTests.HealthCheckFactory factory) : ICl
             builder.ConfigureServices(services =>
             {
                 var adoValidator = Substitute.For<IAdoTokenValidator>();
-                adoValidator.IsValidAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(true);
 
                 ReplaceService(services, adoValidator);

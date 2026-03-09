@@ -1,0 +1,39 @@
+# Build output
+bin/
+obj/
+out/
+
+# .NET user files
+*.user
+*.suo
+.vs/
+TestResults/
+
+# Specs / docs (not needed in image)
+specs/
+.specify/
+
+# Secrets
+.env
+.env.*
+*.secret.*
+
+# IDE
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Source control
+.git/
+.gitignore
+
+# Docker files themselves
+Dockerfile*
+.dockerignore
+
+# Logs
+*.log
+
+# NuGet cache
+packages/

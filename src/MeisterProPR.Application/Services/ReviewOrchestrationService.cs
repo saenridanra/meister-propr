@@ -1,5 +1,6 @@
 using MeisterProPR.Application.Interfaces;
 using MeisterProPR.Domain.Entities;
+using MeisterProPR.Domain.Enums;
 using MeisterProPR.Domain.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -36,6 +37,18 @@ public sealed class ReviewOrchestrationService(
                 job.PullRequestId,
                 job.IterationId,
                 ct);
+
+            // EC-002: PR was closed or abandoned before the review could run.
+            if (pr.Status != PrStatus.Active)
+            {
+                logger.LogWarning(
+                    "PR #{PrId} is no longer active (status: {Status}). Marking job {JobId} as failed.",
+                    job.PullRequestId,
+                    pr.Status,
+                    job.Id);
+                jobs.SetFailed(job.Id, "PR was closed or abandoned before review could begin");
+                return;
+            }
 
             var result = await aiCore.ReviewAsync(pr, ct);
 

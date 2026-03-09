@@ -93,11 +93,23 @@ public class ReviewsControllerListTests(ReviewsControllerListTests.ListReviewsFa
     {
         private IJobRepository? _jobRepo;
 
+        // Fixed client IDs so InsertJob and IClientRegistry stub agree on the same Guid per key.
+        private static readonly Guid ClientId123 = Guid.NewGuid();
+        private static readonly Guid ClientId456 = Guid.NewGuid();
+
+        private static readonly Dictionary<string, Guid> ClientIds = new()
+        {
+            ["test-key-123"] = ClientId123,
+            ["test-key-456"] = ClientId456,
+        };
+
         public ListReviewsFactory()
         {
             Environment.SetEnvironmentVariable("MEISTER_CLIENT_KEYS", "test-key-123,test-key-456");
             Environment.SetEnvironmentVariable("AI_ENDPOINT", "https://fake-ai.openai.azure.com/");
             Environment.SetEnvironmentVariable("AI_DEPLOYMENT", "gpt-4o");
+            // Skip real ADO token HTTP calls in tests — PassThroughAdoTokenValidator accepts any non-empty token.
+            Environment.SetEnvironmentVariable("ADO_SKIP_TOKEN_VALIDATION", "true");
         }
 
         private static void ReplaceService<T>(IServiceCollection services, T implementation) where T : class
@@ -114,9 +126,10 @@ public class ReviewsControllerListTests(ReviewsControllerListTests.ListReviewsFa
         public void InsertJob(string clientKey, int prId)
         {
             var repo = this._jobRepo ?? throw new InvalidOperationException("Factory not initialized");
+            var clientId = ClientIds.TryGetValue(clientKey, out var id) ? id : Guid.NewGuid();
             var job = new ReviewJob(
                 Guid.NewGuid(),
-                clientKey,
+                clientId,
                 "https://dev.azure.com/org",
                 "proj",
                 "repo",
@@ -131,12 +144,17 @@ public class ReviewsControllerListTests(ReviewsControllerListTests.ListReviewsFa
 
             builder.ConfigureServices(services =>
             {
-                var adoValidator = Substitute.For<IAdoTokenValidator>();
-                adoValidator.IsValidAsync("valid-ado-token", Arg.Any<CancellationToken>()).Returns(true);
-                adoValidator.IsValidAsync(Arg.Is<string>(s => s != "valid-ado-token"), Arg.Any<CancellationToken>()).Returns(false);
-                adoValidator.IsValidAsync(null!, Arg.Any<CancellationToken>()).Returns(false);
+                var clientRegistry = Substitute.For<IClientRegistry>();
+                clientRegistry.IsValidKey(Arg.Any<string>()).Returns(callInfo =>
+                    ClientIds.ContainsKey(callInfo.Arg<string>()));
+                clientRegistry.GetClientIdByKeyAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                    .Returns(callInfo =>
+                    {
+                        var key = callInfo.Arg<string>();
+                        return Task.FromResult(ClientIds.TryGetValue(key, out var id) ? (Guid?)id : null);
+                    });
 
-                ReplaceService(services, adoValidator);
+                ReplaceService(services, clientRegistry);
                 ReplaceService(services, Substitute.For<IPullRequestFetcher>());
                 ReplaceService(services, Substitute.For<IAdoCommentPoster>());
             });

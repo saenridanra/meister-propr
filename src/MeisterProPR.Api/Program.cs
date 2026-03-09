@@ -4,8 +4,13 @@ using MeisterProPR.Api.HealthChecks;
 using MeisterProPR.Api.Middleware;
 using MeisterProPR.Api.Telemetry;
 using MeisterProPR.Api.Workers;
+using MeisterProPR.Application.Interfaces;
 using MeisterProPR.Application.Services;
+using MeisterProPR.Domain.Enums;
+using MeisterProPR.Infrastructure.Data;
+using MeisterProPR.Infrastructure.Data.Models;
 using MeisterProPR.Infrastructure.DependencyInjection;
+using Microsoft.EntityFrameworkCore;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 using Serilog;
@@ -37,6 +42,9 @@ try
         builder.Configuration.AddUserSecrets<Program>(true);
     }
 
+    var dbConnectionString = builder.Configuration["DB_CONNECTION_STRING"];
+    var isDbMode = !string.IsNullOrWhiteSpace(dbConnectionString);
+
     // ── Validate required config keys ─────────────────────────────────────────
     // Validation runs after CreateBuilder so builder.Configuration includes all
     // sources (env vars, user secrets, appsettings) and WebApplicationFactory
@@ -45,7 +53,13 @@ try
     // failures propagate to callers such as WebApplicationFactory in tests.
     RequireConfig(builder.Configuration, "AI_ENDPOINT");
     RequireConfig(builder.Configuration, "AI_DEPLOYMENT");
-    RequireConfig(builder.Configuration, "MEISTER_CLIENT_KEYS");
+
+    // MEISTER_CLIENT_KEYS is only required in legacy (non-DB) mode.
+    // In DB mode it is optional and used solely for one-time bootstrap seeding.
+    if (!isDbMode)
+    {
+        RequireConfig(builder.Configuration, "MEISTER_CLIENT_KEYS");
+    }
 
     // ── Serilog ───────────────────────────────────────────────────────────────
     builder.Host.UseSerilog((context, services, configuration) =>
@@ -54,7 +68,13 @@ try
             .ReadFrom.Configuration(context.Configuration)
             .ReadFrom.Services(services)
             .Enrich.FromLogContext()
-            .Enrich.WithProperty("Application", "MeisterProPR");
+            .Enrich.WithProperty("Application", "MeisterProPR")
+            // Scrub secrets from log output
+            .Destructure.ByTransforming<HttpRequest>(r => new
+            {
+                r.Method,
+                r.Path,
+            });
 
         if (!context.HostingEnvironment.IsDevelopment())
         {
@@ -70,11 +90,24 @@ try
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddTransient<ReviewOrchestrationService>();
 
-    // ── Background worker ─────────────────────────────────────────────────────
-    // Register as singleton so WorkerHealthCheck can inject it by concrete type,
+    // ── Crawler service (scope-safe: PrCrawlService is scoped, worker resolves per tick) ──
+    // Only registered in DB mode — PrCrawlService depends on ICrawlConfigurationRepository
+    // which is only available when DB_CONNECTION_STRING is configured.
+    if (isDbMode)
+    {
+        builder.Services.AddScoped<IPrCrawlService, PrCrawlService>();
+    }
+
+    // ── Background workers ────────────────────────────────────────────────────
+    // Register ReviewJobWorker as singleton so WorkerHealthCheck can inject it by concrete type,
     // then forward the same instance as IHostedService.
     builder.Services.AddSingleton<ReviewJobWorker>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<ReviewJobWorker>());
+
+    // AdoPrCrawlerWorker is only useful in DB mode (needs ICrawlConfigurationRepository).
+    // Register it unconditionally — it will gracefully handle missing DI dependencies.
+    builder.Services.AddSingleton<AdoPrCrawlerWorker>();
+    builder.Services.AddHostedService(sp => sp.GetRequiredService<AdoPrCrawlerWorker>());
 
     // ── CORS ──────────────────────────────────────────────────────────────────
     // Fixed origins: testbed (localhost:3000) and Azure DevOps.
@@ -100,8 +133,8 @@ try
                 .SetIsOriginAllowed(origin =>
                     allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
                     (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                     (uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase) ||
-                      uri.Host.EndsWith(".gallerycdn.vsassets.io", StringComparison.OrdinalIgnoreCase))))
+                        (uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase) ||
+                            uri.Host.EndsWith(".gallerycdn.vsassets.io", StringComparison.OrdinalIgnoreCase))))
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
@@ -119,6 +152,7 @@ try
     builder.Services.AddOpenTelemetry()
         .WithTracing(tracing => tracing
             .AddSource(ReviewJobTelemetry.Source.Name)
+            .AddSource("MeisterProPR.Infrastructure")
             .AddAspNetCoreInstrumentation()
             .AddOtlpExporter(o =>
             {
@@ -144,12 +178,65 @@ try
     });
 
     // ── Health checks ─────────────────────────────────────────────────────────
-    builder.Services.AddHealthChecks()
+    var healthChecksBuilder = builder.Services.AddHealthChecks()
         .AddCheck<WorkerHealthCheck>("worker");
+
+    if (isDbMode)
+    {
+        healthChecksBuilder.AddCheck<DatabaseHealthCheck>("database");
+    }
 
     // ══════════════════════════════════════════════════════════════════════════
     var app = builder.Build();
     // ══════════════════════════════════════════════════════════════════════════
+
+    // ── DB migration + bootstrap + startup recovery (DB mode only) ────────────
+    if (isDbMode)
+    {
+        using var scope = app.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeisterProPRDbContext>();
+
+        // Apply any pending migrations automatically on startup
+        await db.Database.MigrateAsync();
+
+        // One-time bootstrap: seed clients from MEISTER_CLIENT_KEYS if clients table is empty
+        var clientCount = await db.Clients.CountAsync();
+        var legacyKeys = builder.Configuration["MEISTER_CLIENT_KEYS"];
+        if (clientCount == 0 && !string.IsNullOrWhiteSpace(legacyKeys))
+        {
+            var keys = legacyKeys.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            foreach (var key in keys)
+            {
+                db.Clients.Add(
+                    new ClientRecord
+                    {
+                        Id = Guid.NewGuid(),
+                        Key = key,
+                        DisplayName = "Bootstrapped from MEISTER_CLIENT_KEYS",
+                        IsActive = true,
+                        CreatedAt = DateTimeOffset.UtcNow,
+                    });
+            }
+
+            await db.SaveChangesAsync();
+            Log.Warning(
+                "Bootstrap: seeded {Count} client(s) from MEISTER_CLIENT_KEYS. " +
+                "This env var is deprecated in DB mode and will be ignored on subsequent startups.",
+                keys.Length);
+        }
+
+        // Startup recovery: transition stale Processing jobs (e.g., from a crash) back to Pending
+        var jobRepo = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+        var staleJobs = await jobRepo.GetProcessingJobsAsync();
+        foreach (var job in staleJobs)
+        {
+            jobRepo.TryTransition(job.Id, JobStatus.Processing, JobStatus.Pending);
+            Log.Warning(
+                "Startup recovery: job {JobId} for PR#{PrId} was stale (Processing); reset to Pending.",
+                job.Id,
+                job.PullRequestId);
+        }
+    }
 
     app.UseSerilogRequestLogging();
 
@@ -168,10 +255,12 @@ try
         {
             ctx.Response.Headers.Append("Access-Control-Allow-Private-Network", "true");
         }
+
         await next();
     });
 
     app.UseCors();
+    app.UseMiddleware<AdminKeyMiddleware>();
     app.UseMiddleware<ClientKeyMiddleware>();
     app.MapControllers();
     app.MapHealthChecks("/healthz");
