@@ -10,7 +10,7 @@ namespace MeisterProPR.Infrastructure.AzureDevOps;
 /// </summary>
 internal sealed class PassThroughAdoTokenValidator : IAdoTokenValidator
 {
-    public Task<bool> IsValidAsync(string adoToken, CancellationToken ct = default)
+    public Task<bool> IsValidAsync(string adoToken, string? orgUrl = null, CancellationToken ct = default)
     {
         return Task.FromResult(!string.IsNullOrWhiteSpace(adoToken));
     }

@@ -183,12 +183,12 @@ public class ReviewsControllerGetTests(ReviewsControllerGetTests.GetReviewsFacto
             builder.ConfigureServices(services =>
             {
                 var adoValidator = Substitute.For<IAdoTokenValidator>();
-                adoValidator.IsValidAsync("valid-ado-token", Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync("valid-ado-token", Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(true);
-                adoValidator.IsValidAsync(Arg.Is<string>(s => s != "valid-ado-token"), Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync(Arg.Is<string>(s => s != "valid-ado-token"), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(false);
                 // empty/null token (missing header) also returns false
-                adoValidator.IsValidAsync(null!, Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync(null!, Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(false);
 
                 ReplaceService(services, adoValidator);

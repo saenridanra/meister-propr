@@ -47,6 +47,10 @@ internal sealed class CrawlConfigurationEntityTypeConfiguration : IEntityTypeCon
             .OnDelete(DeleteBehavior.Cascade);
 
         builder.HasIndex(c => c.ClientId).HasDatabaseName("ix_crawl_configurations_client_id");
+
+        builder.HasIndex(c => new { c.ClientId, c.OrganizationUrl, c.ProjectId, c.ReviewerId })
+            .IsUnique()
+            .HasDatabaseName("ix_crawl_configurations_unique_config");
         builder.HasIndex(c => c.IsActive)
             .HasDatabaseName("ix_crawl_configurations_active")
             .HasFilter("is_active = true");

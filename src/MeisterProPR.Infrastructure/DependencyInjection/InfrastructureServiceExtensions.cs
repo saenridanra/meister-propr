@@ -1,4 +1,5 @@
 using System.ClientModel;
+using Microsoft.Extensions.Logging;
 using Azure.AI.OpenAI;
 using Azure.Core;
 using Azure.Identity;
@@ -82,8 +83,14 @@ public static class InfrastructureServiceExtensions
         }
         else
         {
+            // Credential is needed for server-side JWT validation regardless of ADO_STUB_PR.
+            var validatorCredential = ResolveCredential(configuration);
             services.AddHttpClient("AdoTokenValidator");
-            services.AddSingleton<IAdoTokenValidator, AdoTokenValidator>();
+            services.AddSingleton<IAdoTokenValidator>(sp =>
+                new AdoTokenValidator(
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    validatorCredential,
+                    sp.GetRequiredService<ILogger<AdoTokenValidator>>()));
         }
 
         // ADO operations

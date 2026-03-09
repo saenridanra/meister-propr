@@ -120,7 +120,7 @@ public class ClientKeyMiddlewareTests(ClientKeyMiddlewareTests.TestWebApplicatio
             {
                 // Replace real infrastructure with stubs
                 var adoValidator = Substitute.For<IAdoTokenValidator>();
-                adoValidator.IsValidAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync(Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(true);
 
                 var prFetcher = Substitute.For<IPullRequestFetcher>();

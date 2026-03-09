@@ -25,4 +25,7 @@ public interface ICrawlConfigurationRepository
 
     /// <summary>Deletes a crawl configuration. Returns false if not found or not owned by clientId.</summary>
     Task<bool> DeleteAsync(Guid configId, Guid clientId, CancellationToken ct = default);
+
+    /// <summary>Returns true if a configuration with the same org/project/reviewer already exists for the client.</summary>
+    Task<bool> ExistsAsync(Guid clientId, string organizationUrl, string projectId, Guid reviewerId, CancellationToken ct = default);
 }

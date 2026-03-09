@@ -79,11 +79,16 @@ public sealed class ClientsController(
                 matches = identityMatches.Select(m => new { m.Id, m.DisplayName }),
             });
 
+        var reviewerId = identityMatches[0].Id;
+
+        if (await crawlConfigs.ExistsAsync(clientId, request.OrganizationUrl, request.ProjectId, reviewerId, ct))
+            return this.Conflict(new { error = "A crawl configuration for this organisation, project and reviewer already exists." });
+
         var config = await crawlConfigs.AddAsync(
             clientId,
             request.OrganizationUrl,
             request.ProjectId,
-            identityMatches[0].Id,
+            reviewerId,
             request.CrawlIntervalSeconds,
             ct);
 

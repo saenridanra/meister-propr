@@ -166,9 +166,9 @@ public class ReviewsControllerPostTests(ReviewsControllerPostTests.ReviewsApiFac
             {
                 var adoValidator = Substitute.For<IAdoTokenValidator>();
                 // "valid-ado-token" returns true; everything else returns false
-                adoValidator.IsValidAsync("valid-ado-token", Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync("valid-ado-token", Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(true);
-                adoValidator.IsValidAsync(Arg.Is<string>(s => s != "valid-ado-token"), Arg.Any<CancellationToken>())
+                adoValidator.IsValidAsync(Arg.Is<string>(s => s != "valid-ado-token"), Arg.Any<string?>(), Arg.Any<CancellationToken>())
                     .Returns(false);
 
                 ReplaceService(services, adoValidator);

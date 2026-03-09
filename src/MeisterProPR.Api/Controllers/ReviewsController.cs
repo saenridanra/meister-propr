@@ -49,6 +49,7 @@ public sealed partial class ReviewsController(
 
     /// <summary>Get the status and result of a review job.</summary>
     /// <param name="adoToken">ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.</param>
+    /// <param name="adoOrgUrl">ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs.</param>
     /// <param name="jobId">The job identifier returned from POST /reviews.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="200">Job status and, once completed, its result.</response>
@@ -60,10 +61,11 @@ public sealed partial class ReviewsController(
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetReview(
         [FromHeader(Name = "X-Ado-Token")] string? adoToken,
+        [FromHeader(Name = "X-Ado-Org-Url")] string? adoOrgUrl,
         Guid jobId,
         CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(adoToken) || !await adoTokenValidator.IsValidAsync(adoToken, ct))
+        if (string.IsNullOrWhiteSpace(adoToken) || !await adoTokenValidator.IsValidAsync(adoToken, adoOrgUrl, ct))
         {
             return this.Unauthorized();
         }
@@ -79,6 +81,7 @@ public sealed partial class ReviewsController(
 
     /// <summary>List all review jobs for the current client.</summary>
     /// <param name="adoToken">ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.</param>
+    /// <param name="adoOrgUrl">ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="200">List of review jobs, newest first.</response>
     /// <response code="401">Invalid or missing client key, or invalid ADO token.</response>
@@ -87,11 +90,12 @@ public sealed partial class ReviewsController(
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
     public async Task<IActionResult> ListReviews(
         [FromHeader(Name = "X-Ado-Token")] string? adoToken,
+        [FromHeader(Name = "X-Ado-Org-Url")] string? adoOrgUrl,
         CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(adoToken) || !await adoTokenValidator.IsValidAsync(adoToken, ct))
+        if (string.IsNullOrWhiteSpace(adoToken) || !await adoTokenValidator.IsValidAsync(adoToken, adoOrgUrl, ct))
         {
-            this.LogAdoTokenRejected();
+            this.LogAdoTokenRejected(this.Request.Method, this.Request.Path);
             return this.Unauthorized();
         }
 
@@ -116,9 +120,9 @@ public sealed partial class ReviewsController(
         [FromBody] ReviewRequest request,
         CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(adoToken) || !await adoTokenValidator.IsValidAsync(adoToken, ct))
+        if (string.IsNullOrWhiteSpace(adoToken) || !await adoTokenValidator.IsValidAsync(adoToken, request.OrganizationUrl, ct))
         {
-            this.LogAdoTokenRejected();
+            this.LogAdoTokenRejected(this.Request.Method, this.Request.Path);
             return this.Unauthorized();
         }
 
@@ -151,8 +155,8 @@ public sealed partial class ReviewsController(
         return this.Accepted(new ReviewJobResponse(job.Id));
     }
 
-    [LoggerMessage(Level = LogLevel.Warning, Message = "ADO token validation failed for review submission.")]
-    private partial void LogAdoTokenRejected();
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ADO token validation failed for {Method} {Path}.")]
+    private partial void LogAdoTokenRejected(string method, string path);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Review job {JobId} created for PR#{PrId}")]
     private partial void LogReviewJobCreated(Guid jobId, int prId);
