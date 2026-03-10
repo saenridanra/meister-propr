@@ -16,6 +16,17 @@ services:
     ports:
       - "5432:5432"
 
+  admin-ui:
+    build:
+      context: .
+      dockerfile: admin-ui/Dockerfile
+    healthcheck:
+      test: [ "CMD", "wget", "-qO-", "http://127.0.0.1/healthz" ]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
   nginx:
     image: nginx:alpine
     command:
@@ -29,6 +40,8 @@ services:
       - nginx_certs:/etc/nginx/certs
     depends_on:
       meisterpropr:
+        condition: service_healthy
+      admin-ui:
         condition: service_healthy
 
   meisterpropr:

@@ -1,0 +1,32 @@
+{
+  "name": "meister-propr-admin-ui",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "generate:api": "openapi-typescript ../openapi.json -o src/services/generated/openapi.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "vue": "^3.5.13",
+    "vue-router": "^4.4.3",
+    "openapi-fetch": "^0.13.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^5.2.1",
+    "@vitest/coverage-v8": "^3.0.0",
+    "@vue/test-utils": "^2.4.6",
+    "jsdom": "^25.0.0",
+    "openapi-typescript": "^7.0.0",
+    "typescript": "^5.6.3",
+    "vite": "^6.0.5",
+    "vitest": "^3.0.0",
+    "vue-tsc": "^2.1.10"
+  }
+}

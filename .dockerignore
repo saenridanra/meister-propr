@@ -37,3 +37,8 @@ Dockerfile*
 
 # NuGet cache
 packages/
+
+# Node / admin-ui
+admin-ui/node_modules/
+admin-ui/dist/
+admin-ui/coverage/

@@ -1,0 +1,144 @@
+/* Colour tokens */
+:root {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-success: #16a34a;
+  --color-muted: #6b7280;
+  --color-bg: #f9fafb;
+  --color-surface: #ffffff;
+  --color-border: #e5e7eb;
+  --color-text: #111827;
+}
+
+/* Base */
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* Buttons */
+button, .btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  background: var(--color-primary);
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+button:hover, .btn-primary:hover { background: var(--color-primary-hover); }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+button.btn-danger { background: var(--color-danger); }
+button.btn-danger:hover { background: var(--color-danger-hover); }
+
+/* Badges */
+.badge-active, .badge-configured { color: var(--color-success); font-weight: 600; }
+.badge-inactive, .badge-none { color: var(--color-muted); }
+
+/* Forms */
+label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.25rem; }
+input[type="text"], input[type="password"], input[type="search"] {
+  display: block;
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.375rem;
+  font-size: 1rem;
+}
+input:focus { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.form-field { margin-bottom: 1rem; }
+.form-actions { display: flex; gap: 0.75rem; margin-top: 1.25rem; }
+
+/* Error / loading */
+.error { color: var(--color-danger); font-size: 0.875rem; margin: 0.5rem 0; }
+.field-error { color: var(--color-danger); font-size: 0.75rem; }
+.loading { color: var(--color-muted); }
+
+/* Tables */
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: 0.75rem 1rem; border-bottom: 1px solid var(--color-border); }
+th { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--color-muted); }
+tr:hover td { background: var(--color-bg); }
+
+/* AppHeader */
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1.5rem;
+  background: var(--color-surface);
+  border-bottom: 1px solid var(--color-border);
+}
+.app-title { font-weight: 700; font-size: 1.125rem; }
+.logout-btn { background: transparent; color: var(--color-muted); }
+.logout-btn:hover { color: var(--color-danger); background: transparent; }
+
+/* Layout */
+.clients-view, .client-detail-view, .login-view {
+  max-width: 64rem;
+  margin: 2rem auto;
+  padding: 0 1.5rem;
+}
+.clients-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+.search-input { flex: 1; }
+
+/* Confirm dialog */
+.confirm-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+.confirm-dialog {
+  background: var(--color-surface);
+  border-radius: 0.5rem;
+  padding: 2rem;
+  min-width: 20rem;
+}
+.confirm-dialog-actions { display: flex; gap: 0.75rem; margin-top: 1.5rem; justify-content: flex-end; }
+
+/* Client detail sections */
+.client-detail-view h2 { margin: 0 0 1.5rem; }
+.client-detail-view section {
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+.client-detail-view section:last-child { border-bottom: none; }
+.edit-section label { margin-bottom: 0.25rem; }
+.edit-section .save-btn { margin-top: 0.75rem; }
+.status-section { display: flex; align-items: center; gap: 1rem; }
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--color-muted);
+  text-decoration: none;
+  margin-bottom: 1.25rem;
+}
+.back-link:hover { color: var(--color-primary); }
+
+/* Login */
+.login-view { max-width: 24rem; }
