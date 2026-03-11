@@ -23,12 +23,15 @@ internal static class ReviewPrompts
 
     internal static string BuildUserMessage(PullRequest pr)
     {
+        var sb = new StringBuilder();
+
         if (pr.ChangedFiles.Count == 0)
         {
-            return "No files changed. Return summary stating no changes found; empty comments array.";
+            sb.AppendLine("No files changed. Return summary stating no changes found; empty comments array.");
+            AppendExistingThreads(sb, pr);
+            return sb.ToString();
         }
 
-        var sb = new StringBuilder();
         sb.AppendLine($"Pull Request: {pr.Title}");
         sb.AppendLine($"{pr.SourceBranch} → {pr.TargetBranch}");
         if (!string.IsNullOrWhiteSpace(pr.Description))
@@ -49,6 +52,33 @@ internal static class ReviewPrompts
             sb.AppendLine(file.UnifiedDiff);
         }
 
+        AppendExistingThreads(sb, pr);
         return sb.ToString();
+    }
+
+    private static void AppendExistingThreads(StringBuilder sb, PullRequest pr)
+    {
+        if (pr.ExistingThreads?.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## Existing Review Threads");
+            sb.AppendLine(
+                "The following threads already exist on this PR. Take them into account: " +
+                "avoid re-flagging resolved issues, and consider developer responses.");
+
+            foreach (var thread in pr.ExistingThreads)
+            {
+                var location = thread.FilePath is not null
+                    ? $"{thread.FilePath}{(thread.LineNumber.HasValue ? $":L{thread.LineNumber}" : "")}"
+                    : "(PR-level)";
+
+                sb.AppendLine();
+                sb.AppendLine($"### Thread at {location}");
+                foreach (var comment in thread.Comments)
+                {
+                    sb.AppendLine($"  [{comment.AuthorName}]: {comment.Content}");
+                }
+            }
+        }
     }
 }

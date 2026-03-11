@@ -16,6 +16,11 @@ namespace MeisterProPR.Domain.ValueObjects;
 /// <param name="TargetBranch">Target branch name.</param>
 /// <param name="ChangedFiles">List of changed files in the pull request.</param>
 /// <param name="Status">Current status of the pull request (defaults to <see cref="PrStatus.Active" />).</param>
+/// <param name="ExistingThreads">
+///     Existing comment threads on the PR fetched before the review runs.
+///     Used to provide AI context and to avoid posting duplicate bot comments.
+///     Defaults to <c>null</c> (treated as empty — no deduplication).
+/// </param>
 public sealed record PullRequest(
     string OrganizationUrl,
     string ProjectId,
@@ -27,4 +32,5 @@ public sealed record PullRequest(
     string SourceBranch,
     string TargetBranch,
     IReadOnlyList<ChangedFile> ChangedFiles,
-    PrStatus Status = PrStatus.Active);
+    PrStatus Status = PrStatus.Active,
+    IReadOnlyList<PrCommentThread>? ExistingThreads = null);

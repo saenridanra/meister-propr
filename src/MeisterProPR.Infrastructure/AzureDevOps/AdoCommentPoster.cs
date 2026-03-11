@@ -17,6 +17,7 @@ public sealed class AdoCommentPoster(
         int iterationId,
         ReviewResult result,
         Guid? clientId = null,
+        IReadOnlyList<PrCommentThread>? existingThreads = null,
         CancellationToken cancellationToken = default)
     {
         var credentials = clientId.HasValue
@@ -39,30 +40,34 @@ public sealed class AdoCommentPoster(
                 c => NormalizePath(c.Item!.Path!),
                 c => c.ChangeTrackingId);
 
-        // Post summary as PR-level thread (no file context)
-        await CreateThreadAsync(
-            gitClient,
-            projectId,
-            repositoryId,
-            pullRequestId,
-            $"**AI Review Summary**\n\n{result.Summary}",
-            null,
-            null,
-            cancellationToken);
+        // Post summary as PR-level thread, skipping if a bot summary already exists.
+        if (!HasBotSummary(existingThreads))
+        {
+            await CreateThreadAsync(
+                gitClient,
+                projectId,
+                repositoryId,
+                pullRequestId,
+                $"**AI Review Summary**\n\n{result.Summary}",
+                null,
+                null,
+                cancellationToken);
+        }
 
-        // Post each inline comment
+        // Post each inline comment, skipping locations the bot has already covered.
         foreach (var comment in result.Comments)
         {
             CommentThreadContext? threadContext = null;
             GitPullRequestCommentThreadContext? prThreadContext = null;
+            string? normalizedFilePath = null;
 
             if (comment.FilePath is not null)
             {
                 // ADO requires paths with a leading '/'; normalise in case the AI omits it.
-                var filePath = NormalizePath(comment.FilePath);
+                normalizedFilePath = NormalizePath(comment.FilePath);
                 threadContext = new CommentThreadContext
                 {
-                    FilePath = filePath,
+                    FilePath = normalizedFilePath,
                     RightFileStart = comment.LineNumber.HasValue
                         ? new CommentPosition { Line = comment.LineNumber.Value, Offset = 1 }
                         : null,
@@ -72,7 +77,7 @@ public sealed class AdoCommentPoster(
                 };
 
                 // pullRequestThreadContext anchors the thread to the correct iteration diff.
-                if (changeTrackingIds.TryGetValue(filePath, out var trackingId))
+                if (changeTrackingIds.TryGetValue(normalizedFilePath, out var trackingId))
                 {
                     prThreadContext = new GitPullRequestCommentThreadContext
                     {
@@ -84,6 +89,11 @@ public sealed class AdoCommentPoster(
                         },
                     };
                 }
+            }
+
+            if (HasBotThreadAt(existingThreads, normalizedFilePath, comment.LineNumber))
+            {
+                continue;
             }
 
             var severityPrefix = comment.Severity switch
@@ -105,6 +115,41 @@ public sealed class AdoCommentPoster(
                 cancellationToken);
         }
     }
+
+    /// <summary>
+    ///     Returns <c>true</c> if the given comment content was authored by the bot.
+    ///     Identified by well-known text prefixes rather than by identity lookup.
+    /// </summary>
+    internal static bool IsBotContent(string content) =>
+        content.StartsWith("**AI Review Summary**", StringComparison.Ordinal) ||
+        content.StartsWith("ERROR: ", StringComparison.Ordinal) ||
+        content.StartsWith("WARNING: ", StringComparison.Ordinal) ||
+        content.StartsWith("SUGGESTION: ", StringComparison.Ordinal) ||
+        content.StartsWith("INFO: ", StringComparison.Ordinal);
+
+    /// <summary>
+    ///     Returns <c>true</c> if a bot-authored PR-level summary thread already exists.
+    /// </summary>
+    internal static bool HasBotSummary(IReadOnlyList<PrCommentThread>? threads) =>
+        (threads ?? []).Any(t =>
+            t.FilePath is null &&
+            t.Comments.Any(c => c.Content.StartsWith("**AI Review Summary**", StringComparison.Ordinal)));
+
+    /// <summary>
+    ///     Returns <c>true</c> if a bot-authored thread already exists at the given file path and line number.
+    /// </summary>
+    internal static bool HasBotThreadAt(
+        IReadOnlyList<PrCommentThread>? threads,
+        string? filePath,
+        int? lineNumber) =>
+        filePath is not null &&
+        (threads ?? []).Any(t =>
+            t.FilePath == filePath &&
+            t.LineNumber == lineNumber &&
+            t.Comments.Any(c => IsBotContent(c.Content)));
+
+    private static string NormalizePath(string path) =>
+        path.StartsWith('/') ? path : "/" + path;
 
     private static async Task CreateThreadAsync(
         GitHttpClient gitClient,
