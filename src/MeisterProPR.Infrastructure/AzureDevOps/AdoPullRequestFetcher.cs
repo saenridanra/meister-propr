@@ -8,7 +8,7 @@ using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace MeisterProPR.Infrastructure.AzureDevOps;
 
-public sealed class AdoPullRequestFetcher(
+public partial class AdoPullRequestFetcher(
     VssConnectionFactory connectionFactory,
     IClientAdoCredentialRepository credentialRepository,
     ILogger<AdoPullRequestFetcher> logger) : IPullRequestFetcher

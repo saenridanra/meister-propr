@@ -183,9 +183,4 @@ public sealed class AdoCommentPoster(
     {
         return path.StartsWith('/') ? path : "/" + path;
     }
-
-    private static string NormalizePath(string path)
-    {
-        return path.StartsWith('/') ? path : "/" + path;
-    }
 }
