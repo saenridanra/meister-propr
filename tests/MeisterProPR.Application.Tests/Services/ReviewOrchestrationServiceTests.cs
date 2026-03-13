@@ -281,6 +281,59 @@ public class ReviewOrchestrationServiceTests
             .PostAsync(default!, default!, default!, default, default, default!);
     }
 
+    [Fact]
+    public async Task ProcessAsync_PassesExistingThreadsToCommentPoster()
+    {
+        // Arrange
+        var (jobs, prFetcher, aiCore, commentPoster, reviewerManager, clientRegistry, logger) = CreateDeps();
+
+        var job = CreateJob();
+        var threads = new List<PrCommentThread>
+        {
+            new(
+                1,
+                "/src/Foo.cs",
+                5,
+                new List<PrThreadComment>
+                {
+                    new("Bot", "ERROR: Null ref."),
+                }.AsReadOnly()),
+        }.AsReadOnly();
+        var pr = CreatePullRequest(threads);
+        var result = CreateReviewResult();
+
+        SetupReviewerIdReturns(clientRegistry, job, Guid.NewGuid());
+        prFetcher.FetchAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<Guid?>(),
+                Arg.Any<CancellationToken>())
+            .Returns(pr);
+        aiCore.ReviewAsync(Arg.Any<PullRequest>(), Arg.Any<CancellationToken>())
+            .Returns(result);
+
+        var service = CreateService(jobs, prFetcher, aiCore, commentPoster, reviewerManager, clientRegistry, logger);
+
+        // Act
+        await service.ProcessAsync(job, CancellationToken.None);
+
+        // Assert - existing threads are forwarded to the comment poster
+        await commentPoster.Received(1)
+            .PostAsync(
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<string>(),
+                Arg.Any<int>(),
+                Arg.Any<int>(),
+                Arg.Any<ReviewResult>(),
+                Arg.Any<Guid?>(),
+                threads,
+                Arg.Any<CancellationToken>());
+    }
+
     // ── EC-002: PR abandoned/closed while Processing ──────────────────────────
 
     [Theory]
@@ -438,55 +491,6 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<IReadOnlyList<PrCommentThread>?>(),
                 Arg.Any<CancellationToken>());
         jobs.DidNotReceive().SetFailed(Arg.Any<Guid>(), Arg.Any<string>());
-    }
-
-    [Fact]
-    public async Task ProcessAsync_PassesExistingThreadsToCommentPoster()
-    {
-        // Arrange
-        var (jobs, prFetcher, aiCore, commentPoster, reviewerManager, clientRegistry, logger) = CreateDeps();
-
-        var job = CreateJob();
-        var threads = new List<PrCommentThread>
-        {
-            new(1, "/src/Foo.cs", 5, new List<PrThreadComment>
-            {
-                new("Bot", "ERROR: Null ref."),
-            }.AsReadOnly()),
-        }.AsReadOnly();
-        var pr = CreatePullRequest(threads);
-        var result = CreateReviewResult();
-
-        SetupReviewerIdReturns(clientRegistry, job, Guid.NewGuid());
-        prFetcher.FetchAsync(
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<int>(),
-                Arg.Any<int>(),
-                Arg.Any<Guid?>(),
-                Arg.Any<CancellationToken>())
-            .Returns(pr);
-        aiCore.ReviewAsync(Arg.Any<PullRequest>(), Arg.Any<CancellationToken>())
-            .Returns(result);
-
-        var service = CreateService(jobs, prFetcher, aiCore, commentPoster, reviewerManager, clientRegistry, logger);
-
-        // Act
-        await service.ProcessAsync(job, CancellationToken.None);
-
-        // Assert - existing threads are forwarded to the comment poster
-        await commentPoster.Received(1)
-            .PostAsync(
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<string>(),
-                Arg.Any<int>(),
-                Arg.Any<int>(),
-                Arg.Any<ReviewResult>(),
-                Arg.Any<Guid?>(),
-                threads,
-                Arg.Any<CancellationToken>());
     }
 
     // T026 — GetReviewerIdAsync returns non-null → AddOptionalReviewerAsync called with that GUID

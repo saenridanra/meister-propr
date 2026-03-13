@@ -149,8 +149,7 @@ public sealed class AdoPullRequestFetcher(
             changedFiles.Add(new ChangedFile(path, changeType, headContent, diff));
         }
 
-        var existingThreads = await FetchExistingThreadsAsync(
-            gitClient, projectId, repositoryId, pullRequestId, cancellationToken);
+        var existingThreads = await this.FetchExistingThreadsAsync(gitClient, projectId, repositoryId, pullRequestId, cancellationToken);
 
         return new PullRequest(
             organizationUrl,
@@ -164,44 +163,6 @@ public sealed class AdoPullRequestFetcher(
             pr.TargetRefName ?? "",
             changedFiles.AsReadOnly(),
             ExistingThreads: existingThreads);
-    }
-
-    private async Task<IReadOnlyList<PrCommentThread>> FetchExistingThreadsAsync(
-        GitHttpClient gitClient,
-        string projectId,
-        string repositoryId,
-        int pullRequestId,
-        CancellationToken cancellationToken)
-    {
-        try
-        {
-            var rawThreads = await gitClient.GetThreadsAsync(
-                projectId,
-                repositoryId,
-                pullRequestId,
-                cancellationToken: cancellationToken);
-
-            return (rawThreads ?? [])
-                .Where(t => t.IsDeleted != true && t.Comments?.Count > 0)
-                .Select(t => new PrCommentThread(
-                    t.Id,
-                    t.ThreadContext?.FilePath,
-                    t.ThreadContext?.RightFileStart?.Line,
-                    t.Comments!
-                        .Where(c => c.IsDeleted != true)
-                        .Select(c => new PrThreadComment(
-                            c.Author?.DisplayName ?? "Unknown",
-                            c.Content ?? ""))
-                        .ToList()
-                        .AsReadOnly()))
-                .ToList()
-                .AsReadOnly();
-        }
-        catch (Exception ex)
-        {
-            LogThreadFetchWarning(logger, pullRequestId, ex);
-            return [];
-        }
     }
 
     private static string BuildUnifiedDiff(string oldContent, string newContent)
@@ -226,4 +187,42 @@ public sealed class AdoPullRequestFetcher(
         Level = LogLevel.Warning,
         Message = "Failed to fetch existing comment threads for PR #{PullRequestId}. Proceeding without thread context.")]
     private static partial void LogThreadFetchWarning(ILogger logger, int pullRequestId, Exception ex);
+
+    private async Task<IReadOnlyList<PrCommentThread>> FetchExistingThreadsAsync(
+        GitHttpClient gitClient,
+        string projectId,
+        string repositoryId,
+        int pullRequestId,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var rawThreads = await gitClient.GetThreadsAsync(
+                projectId,
+                repositoryId,
+                pullRequestId,
+                cancellationToken: cancellationToken);
+
+            return (rawThreads ?? [])
+                .Where(t => !t.IsDeleted && t.Comments?.Count > 0)
+                .Select(t => new PrCommentThread(
+                    t.Id,
+                    t.ThreadContext?.FilePath,
+                    t.ThreadContext?.RightFileStart?.Line,
+                    t.Comments!
+                        .Where(c => !c.IsDeleted)
+                        .Select(c => new PrThreadComment(
+                            c.Author?.DisplayName ?? "Unknown",
+                            c.Content ?? ""))
+                        .ToList()
+                        .AsReadOnly()))
+                .ToList()
+                .AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            LogThreadFetchWarning(logger, pullRequestId, ex);
+            return [];
+        }
+    }
 }

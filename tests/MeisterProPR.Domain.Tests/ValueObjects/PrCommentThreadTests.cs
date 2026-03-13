@@ -17,15 +17,6 @@ public class PrCommentThreadTests
     }
 
     [Fact]
-    public void PrCommentThread_WithoutFilePath_IsNullFilePath()
-    {
-        var thread = new PrCommentThread(2, null, null, new List<PrThreadComment>().AsReadOnly());
-
-        Assert.Null(thread.FilePath);
-        Assert.Null(thread.LineNumber);
-    }
-
-    [Fact]
     public void PrCommentThread_WithMultipleComments_PreservesOrder()
     {
         var comments = new List<PrThreadComment>
@@ -39,6 +30,15 @@ public class PrCommentThreadTests
         Assert.Equal(2, thread.Comments.Count);
         Assert.Equal("Bot", thread.Comments[0].AuthorName);
         Assert.Equal("Alice", thread.Comments[1].AuthorName);
+    }
+
+    [Fact]
+    public void PrCommentThread_WithoutFilePath_IsNullFilePath()
+    {
+        var thread = new PrCommentThread(2, null, null, new List<PrThreadComment>().AsReadOnly());
+
+        Assert.Null(thread.FilePath);
+        Assert.Null(thread.LineNumber);
     }
 
     [Fact]

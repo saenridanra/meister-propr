@@ -117,23 +117,14 @@ public sealed class AdoCommentPoster(
     }
 
     /// <summary>
-    ///     Returns <c>true</c> if the given comment content was authored by the bot.
-    ///     Identified by well-known text prefixes rather than by identity lookup.
-    /// </summary>
-    internal static bool IsBotContent(string content) =>
-        content.StartsWith("**AI Review Summary**", StringComparison.Ordinal) ||
-        content.StartsWith("ERROR: ", StringComparison.Ordinal) ||
-        content.StartsWith("WARNING: ", StringComparison.Ordinal) ||
-        content.StartsWith("SUGGESTION: ", StringComparison.Ordinal) ||
-        content.StartsWith("INFO: ", StringComparison.Ordinal);
-
-    /// <summary>
     ///     Returns <c>true</c> if a bot-authored PR-level summary thread already exists.
     /// </summary>
-    internal static bool HasBotSummary(IReadOnlyList<PrCommentThread>? threads) =>
-        (threads ?? []).Any(t =>
+    internal static bool HasBotSummary(IReadOnlyList<PrCommentThread>? threads)
+    {
+        return (threads ?? []).Any(t =>
             t.FilePath is null &&
             t.Comments.Any(c => c.Content.StartsWith("**AI Review Summary**", StringComparison.Ordinal)));
+    }
 
     /// <summary>
     ///     Returns <c>true</c> if a bot-authored thread already exists at the given file path and line number.
@@ -141,15 +132,27 @@ public sealed class AdoCommentPoster(
     internal static bool HasBotThreadAt(
         IReadOnlyList<PrCommentThread>? threads,
         string? filePath,
-        int? lineNumber) =>
-        filePath is not null &&
-        (threads ?? []).Any(t =>
-            t.FilePath == filePath &&
-            t.LineNumber == lineNumber &&
-            t.Comments.Any(c => IsBotContent(c.Content)));
+        int? lineNumber)
+    {
+        return filePath is not null &&
+               (threads ?? []).Any(t =>
+                   t.FilePath == filePath &&
+                   t.LineNumber == lineNumber &&
+                   t.Comments.Any(c => IsBotContent(c.Content)));
+    }
 
-    private static string NormalizePath(string path) =>
-        path.StartsWith('/') ? path : "/" + path;
+    /// <summary>
+    ///     Returns <c>true</c> if the given comment content was authored by the bot.
+    ///     Identified by well-known text prefixes rather than by identity lookup.
+    /// </summary>
+    internal static bool IsBotContent(string content)
+    {
+        return content.StartsWith("**AI Review Summary**", StringComparison.Ordinal) ||
+               content.StartsWith("ERROR: ", StringComparison.Ordinal) ||
+               content.StartsWith("WARNING: ", StringComparison.Ordinal) ||
+               content.StartsWith("SUGGESTION: ", StringComparison.Ordinal) ||
+               content.StartsWith("INFO: ", StringComparison.Ordinal);
+    }
 
     private static async Task CreateThreadAsync(
         GitHttpClient gitClient,
@@ -174,6 +177,11 @@ public sealed class AdoCommentPoster(
             pullRequestId,
             projectId,
             ct);
+    }
+
+    private static string NormalizePath(string path)
+    {
+        return path.StartsWith('/') ? path : "/" + path;
     }
 
     private static string NormalizePath(string path)

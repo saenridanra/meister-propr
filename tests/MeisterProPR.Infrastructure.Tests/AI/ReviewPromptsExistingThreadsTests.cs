@@ -28,37 +28,23 @@ public class ReviewPromptsExistingThreadsTests
     }
 
     [Fact]
-    public void BuildUserMessage_WithNoExistingThreads_OmitsExistingThreadsSection()
-    {
-        var pr = CreatePullRequest([]);
-        var message = ReviewPrompts.BuildUserMessage(pr);
-
-        Assert.DoesNotContain("Existing Review Threads", message);
-    }
-
-    [Fact]
-    public void BuildUserMessage_WithNullExistingThreads_OmitsExistingThreadsSection()
-    {
-        var pr = CreatePullRequest(null);
-        var message = ReviewPrompts.BuildUserMessage(pr);
-
-        Assert.DoesNotContain("Existing Review Threads", message);
-    }
-
-    [Fact]
-    public void BuildUserMessage_WithExistingThreads_IncludesExistingThreadsSection()
+    public void BuildUserMessage_PrLevelThread_ShowsPrLevelIndicator()
     {
         var threads = new List<PrCommentThread>
         {
-            new(1, "/src/Foo.cs", 42, new List<PrThreadComment>
-            {
-                new("Bot", "ERROR: Null ref."),
-            }.AsReadOnly()),
+            new(
+                2,
+                null,
+                null,
+                new List<PrThreadComment>
+                {
+                    new("Bot", "**AI Review Summary**\n\nOverall LGTM."),
+                }.AsReadOnly()),
         };
         var pr = CreatePullRequest(threads);
         var message = ReviewPrompts.BuildUserMessage(pr);
 
-        Assert.Contains("Existing Review Threads", message);
+        Assert.Contains("PR-level", message);
     }
 
     [Fact]
@@ -66,11 +52,15 @@ public class ReviewPromptsExistingThreadsTests
     {
         var threads = new List<PrCommentThread>
         {
-            new(1, "/src/Bar.cs", 10, new List<PrThreadComment>
-            {
-                new("Bot", "WARNING: Missing null check."),
-                new("Alice", "Fixed."),
-            }.AsReadOnly()),
+            new(
+                1,
+                "/src/Bar.cs",
+                10,
+                new List<PrThreadComment>
+                {
+                    new("Bot", "WARNING: Missing null check."),
+                    new("Alice", "Fixed."),
+                }.AsReadOnly()),
         };
         var pr = CreatePullRequest(threads);
         var message = ReviewPrompts.BuildUserMessage(pr);
@@ -82,18 +72,40 @@ public class ReviewPromptsExistingThreadsTests
     }
 
     [Fact]
-    public void BuildUserMessage_PrLevelThread_ShowsPrLevelIndicator()
+    public void BuildUserMessage_WithExistingThreads_IncludesExistingThreadsSection()
     {
         var threads = new List<PrCommentThread>
         {
-            new(2, null, null, new List<PrThreadComment>
-            {
-                new("Bot", "**AI Review Summary**\n\nOverall LGTM."),
-            }.AsReadOnly()),
+            new(
+                1,
+                "/src/Foo.cs",
+                42,
+                new List<PrThreadComment>
+                {
+                    new("Bot", "ERROR: Null ref."),
+                }.AsReadOnly()),
         };
         var pr = CreatePullRequest(threads);
         var message = ReviewPrompts.BuildUserMessage(pr);
 
-        Assert.Contains("PR-level", message);
+        Assert.Contains("Existing Review Threads", message);
+    }
+
+    [Fact]
+    public void BuildUserMessage_WithNoExistingThreads_OmitsExistingThreadsSection()
+    {
+        var pr = CreatePullRequest([]);
+        var message = ReviewPrompts.BuildUserMessage(pr);
+
+        Assert.DoesNotContain("Existing Review Threads", message);
+    }
+
+    [Fact]
+    public void BuildUserMessage_WithNullExistingThreads_OmitsExistingThreadsSection()
+    {
+        var pr = CreatePullRequest();
+        var message = ReviewPrompts.BuildUserMessage(pr);
+
+        Assert.DoesNotContain("Existing Review Threads", message);
     }
 }
