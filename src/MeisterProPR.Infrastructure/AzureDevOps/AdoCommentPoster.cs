@@ -153,8 +153,10 @@ public sealed class AdoCommentPoster(
     ///     Returns <c>true</c> if the comment was authored by the bot, identified by VSS identity GUID equality.
     ///     Returns <c>false</c> if either GUID is unknown.
     /// </summary>
-    internal static bool IsBotAuthor(Guid? authorId, Guid? botId) =>
-        authorId.HasValue && botId.HasValue && authorId.Value == botId.Value;
+    internal static bool IsBotAuthor(Guid? authorId, Guid? botId)
+    {
+        return authorId.HasValue && botId.HasValue && authorId.Value == botId.Value;
+    }
 
     private static async Task CreateThreadAsync(
         GitHttpClient gitClient,
