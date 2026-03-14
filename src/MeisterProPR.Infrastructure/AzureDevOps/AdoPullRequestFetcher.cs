@@ -213,7 +213,8 @@ public partial class AdoPullRequestFetcher(
                         .Where(c => !c.IsDeleted)
                         .Select(c => new PrThreadComment(
                             c.Author?.DisplayName ?? "Unknown",
-                            c.Content ?? ""))
+                            c.Content ?? "",
+                            Guid.TryParse(c.Author?.Id, out var aid) ? aid : null))
                         .ToList()
                         .AsReadOnly()))
                 .ToList()

@@ -4,11 +4,14 @@ using MeisterProPR.Infrastructure.AzureDevOps;
 namespace MeisterProPR.Infrastructure.Tests.AzureDevOps;
 
 /// <summary>
-///     Tests for the bot-content detection helper and deduplication filtering logic
+///     Tests for the bot-author detection helper and deduplication filtering logic
 ///     in AdoCommentPoster. These tests exercise pure logic without real ADO calls.
 /// </summary>
 public class AdoCommentPosterDeduplicationTests
 {
+    private static readonly Guid BotId = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static readonly Guid UserId = new("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
     // ── HasBotSummary ─────────────────────────────────────────────────────────
 
     [Fact]
@@ -22,17 +25,17 @@ public class AdoCommentPosterDeduplicationTests
                 null,
                 new List<PrThreadComment>
                 {
-                    new("Bot", "**AI Review Summary**\n\nLooks good."),
+                    new("Bot", "**AI Review Summary**\n\nLooks good.", BotId),
                 }.AsReadOnly()),
         };
 
-        Assert.True(AdoCommentPoster.HasBotSummary(threads));
+        Assert.True(AdoCommentPoster.HasBotSummary(threads, BotId));
     }
 
     [Fact]
     public void HasBotSummary_WithNoThreads_ReturnsFalse()
     {
-        Assert.False(AdoCommentPoster.HasBotSummary([]));
+        Assert.False(AdoCommentPoster.HasBotSummary([], BotId));
     }
 
     [Fact]
@@ -46,29 +49,47 @@ public class AdoCommentPosterDeduplicationTests
                 5,
                 new List<PrThreadComment>
                 {
-                    new("Bot", "ERROR: Null ref."),
+                    new("Bot", "ERROR: Null ref.", BotId),
                 }.AsReadOnly()),
         };
 
-        Assert.False(AdoCommentPoster.HasBotSummary(threads));
+        Assert.False(AdoCommentPoster.HasBotSummary(threads, BotId));
     }
 
     [Fact]
-    public void HasBotThreadAt_BotThreadAtDifferentLine_ReturnsFalse()
+    public void HasBotSummary_BotPrLevelThreadWithNonSummaryContent_ReturnsFalse()
     {
         var threads = new List<PrCommentThread>
         {
             new(
                 1,
-                "/src/Foo.cs",
-                99,
+                null,
+                null,
                 new List<PrThreadComment>
                 {
-                    new("Bot", "ERROR: Different line."),
+                    new("Bot", "Review skipped: no changed files.", BotId),
                 }.AsReadOnly()),
         };
 
-        Assert.False(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42));
+        Assert.False(AdoCommentPoster.HasBotSummary(threads, BotId));
+    }
+
+    [Fact]
+    public void HasBotSummary_NullBotId_ReturnsFalse()
+    {
+        var threads = new List<PrCommentThread>
+        {
+            new(
+                1,
+                null,
+                null,
+                new List<PrThreadComment>
+                {
+                    new("Bot", "**AI Review Summary**", BotId),
+                }.AsReadOnly()),
+        };
+
+        Assert.False(AdoCommentPoster.HasBotSummary(threads, null));
     }
 
     // ── HasBotThreadAt ────────────────────────────────────────────────────────
@@ -84,17 +105,35 @@ public class AdoCommentPosterDeduplicationTests
                 42,
                 new List<PrThreadComment>
                 {
-                    new("Bot", "ERROR: Null ref."),
+                    new("Bot", "ERROR: Null ref.", BotId),
                 }.AsReadOnly()),
         };
 
-        Assert.True(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42));
+        Assert.True(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42, BotId));
+    }
+
+    [Fact]
+    public void HasBotThreadAt_BotThreadAtDifferentLine_ReturnsFalse()
+    {
+        var threads = new List<PrCommentThread>
+        {
+            new(
+                1,
+                "/src/Foo.cs",
+                99,
+                new List<PrThreadComment>
+                {
+                    new("Bot", "ERROR: Different line.", BotId),
+                }.AsReadOnly()),
+        };
+
+        Assert.False(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42, BotId));
     }
 
     [Fact]
     public void HasBotThreadAt_NoExistingThreads_ReturnsFalse()
     {
-        Assert.False(AdoCommentPoster.HasBotThreadAt([], "/src/Foo.cs", 42));
+        Assert.False(AdoCommentPoster.HasBotThreadAt([], "/src/Foo.cs", 42, BotId));
     }
 
     [Fact]
@@ -108,12 +147,11 @@ public class AdoCommentPosterDeduplicationTests
                 null,
                 new List<PrThreadComment>
                 {
-                    new("Bot", "**AI Review Summary**\n\nSummary."),
+                    new("Bot", "**AI Review Summary**", BotId),
                 }.AsReadOnly()),
         };
 
-        // null filePath on inline check means PR-level; inline search uses non-null path
-        Assert.False(AdoCommentPoster.HasBotThreadAt(threads, null, null));
+        Assert.False(AdoCommentPoster.HasBotThreadAt(threads, null, null, BotId));
     }
 
     [Fact]
@@ -127,43 +165,42 @@ public class AdoCommentPosterDeduplicationTests
                 42,
                 new List<PrThreadComment>
                 {
-                    new("Alice", "Fixed this."),
+                    new("Alice", "Fixed this.", UserId),
                 }.AsReadOnly()),
         };
 
-        Assert.False(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42));
+        Assert.False(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42, BotId));
+    }
+
+    // ── IsBotAuthor ───────────────────────────────────────────────────────────
+
+    [Fact]
+    public void IsBotAuthor_MatchingGuids_ReturnsTrue()
+    {
+        Assert.True(AdoCommentPoster.IsBotAuthor(BotId, BotId));
     }
 
     [Fact]
-    public void IsBotContent_EmptyString_ReturnsFalse()
+    public void IsBotAuthor_DifferentGuids_ReturnsFalse()
     {
-        Assert.False(AdoCommentPoster.IsBotContent(""));
+        Assert.False(AdoCommentPoster.IsBotAuthor(UserId, BotId));
     }
-
-    [Theory]
-    [InlineData("ERROR: Null reference here.")]
-    [InlineData("WARNING: Unused variable.")]
-    [InlineData("SUGGESTION: Use var instead.")]
-    [InlineData("INFO: Consider adding a comment.")]
-    public void IsBotContent_SeverityPrefix_ReturnsTrue(string content)
-    {
-        Assert.True(AdoCommentPoster.IsBotContent(content));
-    }
-    // ── IsBotContent ──────────────────────────────────────────────────────────
 
     [Fact]
-    public void IsBotContent_SummaryPrefix_ReturnsTrue()
+    public void IsBotAuthor_NullAuthorId_ReturnsFalse()
     {
-        Assert.True(AdoCommentPoster.IsBotContent("**AI Review Summary**\n\nLooks good."));
+        Assert.False(AdoCommentPoster.IsBotAuthor(null, BotId));
     }
 
-    [Theory]
-    [InlineData("Looks good to me.")]
-    [InlineData("Fixed in this commit.")]
-    [InlineData("LGTM")]
-    [InlineData("error: lowercase prefix is not a bot comment")]
-    public void IsBotContent_UserComment_ReturnsFalse(string content)
+    [Fact]
+    public void IsBotAuthor_NullBotId_ReturnsFalse()
     {
-        Assert.False(AdoCommentPoster.IsBotContent(content));
+        Assert.False(AdoCommentPoster.IsBotAuthor(BotId, null));
+    }
+
+    [Fact]
+    public void IsBotAuthor_BothNull_ReturnsFalse()
+    {
+        Assert.False(AdoCommentPoster.IsBotAuthor(null, null));
     }
 }

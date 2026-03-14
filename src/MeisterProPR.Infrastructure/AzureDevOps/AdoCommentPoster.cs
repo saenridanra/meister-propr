@@ -24,6 +24,8 @@ public sealed class AdoCommentPoster(
             ? await credentialRepository.GetByClientIdAsync(clientId.Value, cancellationToken)
             : null;
         var connection = await connectionFactory.GetConnectionAsync(organizationUrl, credentials, cancellationToken);
+        await connection.ConnectAsync(cancellationToken: cancellationToken);
+        var botId = connection.AuthorizedIdentity?.Id;
         var gitClient = connection.GetClient<GitHttpClient>();
 
         // Build a map of normalised file path → changeTrackingId for inline comment anchoring.
@@ -41,7 +43,7 @@ public sealed class AdoCommentPoster(
                 c => c.ChangeTrackingId);
 
         // Post summary as PR-level thread, skipping if a bot summary already exists.
-        if (!HasBotSummary(existingThreads))
+        if (!HasBotSummary(existingThreads, botId))
         {
             await CreateThreadAsync(
                 gitClient,
@@ -91,7 +93,7 @@ public sealed class AdoCommentPoster(
                 }
             }
 
-            if (HasBotThreadAt(existingThreads, normalizedFilePath, comment.LineNumber))
+            if (HasBotThreadAt(existingThreads, normalizedFilePath, comment.LineNumber, botId))
             {
                 continue;
             }
@@ -118,41 +120,41 @@ public sealed class AdoCommentPoster(
 
     /// <summary>
     ///     Returns <c>true</c> if a bot-authored PR-level summary thread already exists.
+    ///     Bot authorship is determined by comparing the comment's <see cref="PrThreadComment.AuthorId" />
+    ///     against the current connection's authorized identity (<paramref name="botId" />).
     /// </summary>
-    internal static bool HasBotSummary(IReadOnlyList<PrCommentThread>? threads)
+    internal static bool HasBotSummary(IReadOnlyList<PrCommentThread>? threads, Guid? botId)
     {
         return (threads ?? []).Any(t =>
             t.FilePath is null &&
-            t.Comments.Any(c => c.Content.StartsWith("**AI Review Summary**", StringComparison.Ordinal)));
+            t.Comments.Any(c => IsBotAuthor(c.AuthorId, botId)
+                                && c.Content.StartsWith("**AI Review Summary**", StringComparison.Ordinal)));
     }
 
     /// <summary>
     ///     Returns <c>true</c> if a bot-authored thread already exists at the given file path and line number.
+    ///     Bot authorship is determined by comparing the comment's <see cref="PrThreadComment.AuthorId" />
+    ///     against the current connection's authorized identity (<paramref name="botId" />).
     /// </summary>
     internal static bool HasBotThreadAt(
         IReadOnlyList<PrCommentThread>? threads,
         string? filePath,
-        int? lineNumber)
+        int? lineNumber,
+        Guid? botId)
     {
         return filePath is not null &&
                (threads ?? []).Any(t =>
                    t.FilePath == filePath &&
                    t.LineNumber == lineNumber &&
-                   t.Comments.Any(c => IsBotContent(c.Content)));
+                   t.Comments.Any(c => IsBotAuthor(c.AuthorId, botId)));
     }
 
     /// <summary>
-    ///     Returns <c>true</c> if the given comment content was authored by the bot.
-    ///     Identified by well-known text prefixes rather than by identity lookup.
+    ///     Returns <c>true</c> if the comment was authored by the bot, identified by VSS identity GUID equality.
+    ///     Returns <c>false</c> if either GUID is unknown.
     /// </summary>
-    internal static bool IsBotContent(string content)
-    {
-        return content.StartsWith("**AI Review Summary**", StringComparison.Ordinal) ||
-               content.StartsWith("ERROR: ", StringComparison.Ordinal) ||
-               content.StartsWith("WARNING: ", StringComparison.Ordinal) ||
-               content.StartsWith("SUGGESTION: ", StringComparison.Ordinal) ||
-               content.StartsWith("INFO: ", StringComparison.Ordinal);
-    }
+    internal static bool IsBotAuthor(Guid? authorId, Guid? botId) =>
+        authorId.HasValue && botId.HasValue && authorId.Value == botId.Value;
 
     private static async Task CreateThreadAsync(
         GitHttpClient gitClient,

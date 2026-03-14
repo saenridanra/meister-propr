@@ -18,6 +18,11 @@ public sealed record PrCommentThread(
 /// </summary>
 /// <param name="AuthorName">Display name of the comment author from ADO.</param>
 /// <param name="Content">Raw text content of the comment.</param>
+/// <param name="AuthorId">
+///     VSS identity GUID of the comment author, as returned by the ADO comments API.
+///     <c>null</c> when the author ID could not be parsed or was not provided.
+/// </param>
 public sealed record PrThreadComment(
     string AuthorName,
-    string Content);
+    string Content,
+    Guid? AuthorId = null);
