@@ -49,8 +49,14 @@ public sealed partial class ReviewsController(
     }
 
     /// <summary>Get the status and result of a review job.</summary>
-    /// <param name="adoToken">ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.</param>
-    /// <param name="adoOrgUrl">ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs.</param>
+    /// <param name="adoToken">
+    ///     ADO personal access token used solely to verify the requesting user is an authenticated ADO
+    ///     organisation member.
+    /// </param>
+    /// <param name="adoOrgUrl">
+    ///     ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension
+    ///     session tokens; omit for PATs.
+    /// </param>
     /// <param name="jobId">The job identifier returned from POST /reviews.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="200">Job status and, once completed, its result.</response>
@@ -81,8 +87,14 @@ public sealed partial class ReviewsController(
     }
 
     /// <summary>List all review jobs for the current client.</summary>
-    /// <param name="adoToken">ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.</param>
-    /// <param name="adoOrgUrl">ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs.</param>
+    /// <param name="adoToken">
+    ///     ADO personal access token used solely to verify the requesting user is an authenticated ADO
+    ///     organisation member.
+    /// </param>
+    /// <param name="adoOrgUrl">
+    ///     ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension
+    ///     session tokens; omit for PATs.
+    /// </param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="200">List of review jobs, newest first.</response>
     /// <response code="401">Invalid or missing client key, or invalid ADO token.</response>
@@ -112,7 +124,10 @@ public sealed partial class ReviewsController(
     }
 
     /// <summary>Submit a pull request for AI review.</summary>
-    /// <param name="adoToken">ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member.</param>
+    /// <param name="adoToken">
+    ///     ADO personal access token used solely to verify the requesting user is an authenticated ADO
+    ///     organisation member.
+    /// </param>
     /// <param name="request">The PR details to review.</param>
     /// <param name="ct">Cancellation token.</param>
     /// <response code="202">Review job accepted. Poll the returned jobId for status.</response>

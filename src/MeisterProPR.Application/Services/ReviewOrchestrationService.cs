@@ -95,6 +95,7 @@ public sealed class ReviewOrchestrationService(
                 job.IterationId,
                 result,
                 job.ClientId,
+                pr.ExistingThreads,
                 ct);
 
             jobs.SetResult(job.Id, result);

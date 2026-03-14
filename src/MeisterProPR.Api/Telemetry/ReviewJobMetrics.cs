@@ -6,6 +6,8 @@ namespace MeisterProPR.Api.Telemetry;
 /// <summary>Exposes metrics for review jobs (histograms, counters, etc.).</summary>
 public sealed class ReviewJobMetrics : IDisposable
 {
+    private readonly Meter _meter;
+
     /// <summary>Histogram measuring PR crawl cycle durations in seconds.</summary>
     public readonly Histogram<double> CrawlDuration;
 
@@ -14,8 +16,6 @@ public sealed class ReviewJobMetrics : IDisposable
 
     /// <summary>Histogram measuring review job durations in seconds.</summary>
     public readonly Histogram<double> JobDuration;
-
-    private readonly Meter _meter;
 
     /// <summary>Creates the metrics meter and instruments.</summary>
     /// <param name="jobRepository">Repository used to observe queue depth.</param>

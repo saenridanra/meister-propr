@@ -132,9 +132,9 @@ try
                 // use a predicate so any subdomain is matched.
                 .SetIsOriginAllowed(origin =>
                     allowedOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase) ||
-                    (Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                     (uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase) ||
-                      uri.Host.EndsWith(".gallerycdn.vsassets.io", StringComparison.OrdinalIgnoreCase))))
+                    Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                    (uri.Host.EndsWith(".visualstudio.com", StringComparison.OrdinalIgnoreCase) ||
+                     uri.Host.EndsWith(".gallerycdn.vsassets.io", StringComparison.OrdinalIgnoreCase)))
                 .AllowAnyHeader()
                 .AllowAnyMethod()
                 .AllowCredentials();
