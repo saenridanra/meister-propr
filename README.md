@@ -129,7 +129,7 @@ dotnet test   # 235 tests — no Azure credentials or database required
 ## Demo Video
 
 <a href="https://youtu.be/HFaO4oglM2s">
-  <img src="https://img.youtube.com/vi/HFaO4oglM2s/maxresdefault.jpg" alt="Youtube Demo Video" width="400">
+  <img src="https://img.youtube.com/vi/HFaO4oglM2s/maxresdefault.jpg" alt="YouTube demo video" width="400">
 </a>
 
 ---
