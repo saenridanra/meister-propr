@@ -1,0 +1,115 @@
+﻿name: Release
+
+on:
+  push:
+    tags:
+      - 'release/*'
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version-file: global.json
+
+      - name: Restore dependencies
+        run: dotnet restore
+
+      - name: Run tests
+        run: dotnet test --no-restore --configuration Release --verbosity normal
+
+  release:
+    name: Build, push, and sign images
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/release/}" >> "$GITHUB_OUTPUT"
+
+      - name: Set image names (lowercase)
+        id: images
+        run: |
+          REPO=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          echo "backend=${{ env.REGISTRY }}/${REPO}" >> "$GITHUB_OUTPUT"
+          echo "frontend=${{ env.REGISTRY }}/${REPO}/admin-ui" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # ── Backend image ──────────────────────────────────────────────────────
+
+      - name: Build and push backend image
+        id: build-backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ steps.images.outputs.backend }}:${{ steps.version.outputs.version }}
+            ${{ steps.images.outputs.backend }}:latest
+          labels: |
+            org.opencontainers.image.title=MeisterProPR
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest backend image
+        uses: actions/attest@v4.1.0
+        with:
+          subject-name: ${{ steps.images.outputs.backend }}
+          subject-digest: ${{ steps.build-backend.outputs.digest }}
+          push-to-registry: true
+
+      # ── Frontend image ─────────────────────────────────────────────────────
+
+      - name: Build and push frontend image
+        id: build-frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: admin-ui/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.images.outputs.frontend }}:${{ steps.version.outputs.version }}
+            ${{ steps.images.outputs.frontend }}:latest
+          labels: |
+            org.opencontainers.image.title=MeisterProPR Admin UI
+            org.opencontainers.image.version=${{ steps.version.outputs.version }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Attest frontend image
+        uses: actions/attest@v4.1.0
+        with:
+          subject-name: ${{ steps.images.outputs.frontend }}
+          subject-digest: ${{ steps.build-frontend.outputs.digest }}
+          push-to-registry: true
