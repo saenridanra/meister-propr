@@ -39,7 +39,7 @@ public sealed class ReviewJobWorker(
                     var task = this.ProcessJobSafeAsync(capturedJob, stoppingToken);
                     this._inflight[capturedJob.Id] = task;
                     _ = task.ContinueWith(
-                        _ => this._inflight.TryRemove(capturedJob.Id, out _),
+                        t => this._inflight.TryRemove(capturedJob.Id, out _),
                         TaskScheduler.Default);
                 }
             }
