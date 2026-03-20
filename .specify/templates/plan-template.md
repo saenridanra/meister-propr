@@ -3,8 +3,7 @@
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]
 **Input**: Feature specification from `/specs/[###-feature-name]/spec.md`
 
-**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the
-execution workflow.
+**Note**: This template is filled in by the `/speckit.plan` command. See `.specify/templates/plan-template.md` for the execution workflow.
 
 ## Summary
 
@@ -32,20 +31,7 @@ execution workflow.
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-- [ ] **I. API-Contract-First** — Does this feature change the OpenAPI contract?
-  If yes: breaking or non-breaking? Version bump planned? XML docs updated?
-- [ ] **II. Test-First** — Are `[TEST]` tasks defined first in `tasks.md`?
-  Are they confirmed failing before implementation begins?
-- [ ] **III. Container-First** — No Windows-specific APIs introduced?
-  Configuration via env vars only? `/healthz` still valid?
-- [ ] **IV. Clean Architecture** — Do all new dependencies point inward?
-  No business logic in controllers? New abstractions justified in Complexity Tracking?
-- [ ] **V. Security** — `X-Client-Key` validation covered?
-  No ADO token or Foundry credentials logged/stored/returned?
-- [ ] **VI. Job Reliability** — If adding job types: status lifecycle covered?
-  `IJobRepository` used? Idempotency handled? Worker exceptions caught?
-- [ ] **VII. Observability** — Structured log statements added?
-  New ADO/Foundry calls wrapped in `Activity` spans?
+[Gates determined based on constitution file]
 
 ## Project Structure
 
@@ -62,7 +48,6 @@ specs/[###-feature]/
 ```
 
 ### Source Code (repository root)
-
 <!--
   ACTION REQUIRED: Replace the placeholder tree below with the concrete layout
   for this feature. Delete unused options and expand the chosen structure with
@@ -113,7 +98,7 @@ directories captured above]
 
 > **Fill ONLY if Constitution Check has violations that must be justified**
 
-| Violation                  | Why Needed         | Simpler Alternative Rejected Because |
-|----------------------------|--------------------|--------------------------------------|
-| [e.g., 4th project]        | [current need]     | [why 3 projects insufficient]        |
-| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient]  |
+| Violation | Why Needed | Simpler Alternative Rejected Because |
+|-----------|------------|-------------------------------------|
+| [e.g., 4th project] | [current need] | [why 3 projects insufficient] |
+| [e.g., Repository pattern] | [specific problem] | [why direct DB access insufficient] |
