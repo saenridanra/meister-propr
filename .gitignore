@@ -1,4 +1,8 @@
-﻿# Build output
+﻿# AI assistant instruction files (kept locally, managed via speckit)
+CLAUDE.md
+GEMINI.md
+
+# Build output
 bin/
 obj/
 out/

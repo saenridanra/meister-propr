@@ -90,6 +90,56 @@ indicating worker liveness and application readiness, or `503 Service Unavailabl
 on failure; request duration, job queue depth, and job processing duration MUST be
 exported via `System.Diagnostics.Metrics` in a Prometheus-compatible format.
 
+### VIII. Code Style & Formatting
+
+`.editorconfig` at the repository root is the single formatting authority for all
+languages — no ad-hoc formatting overrides are permitted; a
+`dotnet format --verify-no-changes` gate MUST run in CI on every PR and fail the
+build if formatting drift is detected; the rules below reflect the `.editorconfig`
+settings and MUST be enforced consistently:
+
+**C# rules**
+
+- **No regional comments**: `#region` / `#endregion` blocks are prohibited; use
+  XML documentation comments and proper type decomposition to communicate intent
+  instead — the same ban applies to any ad-hoc section marker comments used as
+  structural organisers (e.g. `// ── Foo ──`).
+- **File-scoped namespace declarations** (`namespace Foo.Bar;`) are mandatory in
+  every `.cs` file — block-scoped `namespace Foo.Bar { }` is prohibited.
+- **`sealed` by default**: every concrete class that is not explicitly designed for
+  inheritance MUST be declared `sealed`.
+- **Primary constructors** are the preferred form for constructor injection; a
+  traditional constructor body is only used when construction-time guard clauses or
+  complex initialisation are required.
+- **`var` preference**: use `var` when the type is apparent from the right-hand
+  side expression; use explicit types when the type cannot be inferred clearly
+  from context.
+- **`_camelCase` for private instance fields**; no `m_` prefix; `this.` qualification
+  is REQUIRED for all instance member access (field, property, method, event) —
+  enforced by the `.editorconfig` `dotnet_style_qualification_for_*` rules.
+- **Source-generated `[LoggerMessage]`**: all structured log statements outside of
+  test projects MUST use `[LoggerMessage]`-attributed `partial` methods on `partial`
+  classes — no string-interpolated `logger.LogXxx(...)` calls in production code.
+- **XML documentation comments** are required on every public type, constructor,
+  method, property, and event with at minimum a `<summary>` tag; controller actions
+  MUST additionally carry `<param>` for every parameter and `<response>` for every
+  documented HTTP status code.
+- **Allman brace style**: opening braces always appear on a new line
+  (`csharp_new_line_before_open_brace = all`); `csharp_prefer_braces = true` — no
+  braceless single-line bodies.
+- **Expression-bodied members**: allowed for accessors, properties, lambdas, and
+  indexers; prohibited for constructors, methods, and operators.
+
+**TypeScript / Vue rules**
+
+- Vue SFCs MUST use `<script setup lang="ts">` with the Composition API exclusively;
+  Options API is prohibited.
+- Exported TypeScript functions, types, and interfaces MUST carry JSDoc `/** … */`
+  comments with at minimum a `@description` or summary line — mirroring the XML-doc
+  requirement for C#.
+- Formatting is governed by the `*.ts` / `*.vue` sections of `.editorconfig`
+  (2-space indent for JSON/YAML, 4-space for TypeScript source).
+
 ## Technology Stack & Constraints
 
 **Runtime**: .NET 10 (C#), TFM `net10.0` | **Web**: ASP.NET Core MVC |
@@ -135,9 +185,9 @@ rationale, an incremented version, an updated `Last Amended` date, and a propaga
 pass across all `.specify/templates/` files and `CLAUDE.md`; version policy: MAJOR
 for removed or redefined principles, MINOR for new principles or materially expanded
 guidance, PATCH for clarifications and wording; every PR description MUST include a
-Constitution Check section confirming the seven principles are satisfied or explicitly
+Constitution Check section confirming the eight principles are satisfied or explicitly
 justifying any deviation; complexity beyond what the architecture prescribes MUST be
 justified in the plan's Complexity Tracking table; for runtime development guidance
 refer to `CLAUDE.md` at the repository root.
 
-**Version**: 1.0.0 | **Ratified**: 2026-03-02 | **Last Amended**: 2026-03-02
+**Version**: 1.1.0 | **Ratified**: 2026-03-02 | **Last Amended**: 2026-03-21
