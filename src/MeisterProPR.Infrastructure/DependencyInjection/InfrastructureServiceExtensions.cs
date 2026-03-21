@@ -42,6 +42,7 @@ public static class InfrastructureServiceExtensions
 
             services.AddScoped<IJobRepository, PostgresJobRepository>();
             services.AddScoped<IClientRegistry, PostgresClientRegistry>();
+            services.AddScoped<IClientAdminService, PostgresClientAdminService>();
             services.AddScoped<ICrawlConfigurationRepository, PostgresCrawlConfigurationRepository>();
             services.AddScoped<IClientAdoCredentialRepository, PostgresClientAdoCredentialRepository>();
             services.AddScoped<IMentionReplyJobRepository, EfMentionReplyJobRepository>();

@@ -1,32 +1,27 @@
 using MeisterProPR.Application.DTOs;
 using MeisterProPR.Application.Interfaces;
-using MeisterProPR.Infrastructure.Data;
-using MeisterProPR.Infrastructure.Data.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace MeisterProPR.Api.Controllers;
 
 /// <summary>Manages clients (admin) and crawl configurations (client-scoped).</summary>
 [ApiController]
 public sealed class ClientsController(
-    MeisterProPRDbContext dbContext,
+    IClientAdminService clientAdminService,
     IClientRegistry clientRegistry,
     ICrawlConfigurationRepository crawlConfigs,
     IClientAdoCredentialRepository adoCredentialRepository) : ControllerBase
 {
-    private static ClientResponse ToClientResponse(ClientRecord client)
-    {
-        return new ClientResponse(
+    private static ClientResponse ToClientResponse(ClientDto client) =>
+        new(
             client.Id,
             client.DisplayName,
             client.IsActive,
             client.CreatedAt,
-            client is { AdoTenantId: not null, AdoClientId: not null, AdoClientSecret: not null },
+            client.HasAdoCredentials,
             client.AdoTenantId,
             client.AdoClientId,
             client.ReviewerId);
-    }
 
     /// <summary>
     ///     Adds a crawl configuration for the specified client. Requires <c>X-Client-Key</c> that owns the client.
@@ -62,7 +57,7 @@ public sealed class ClientsController(
             return this.StatusCode(StatusCodes.Status403Forbidden, new { error = "Caller does not own this client." });
         }
 
-        var clientExists = await dbContext.Clients.AnyAsync(c => c.Id == clientId, ct);
+        var clientExists = await clientAdminService.ExistsAsync(clientId, ct);
         if (!clientExists)
         {
             return this.NotFound();
@@ -138,22 +133,11 @@ public sealed class ClientsController(
             return this.BadRequest(new { error = "DisplayName is required." });
         }
 
-        var exists = await dbContext.Clients.AnyAsync(c => c.Key == request.Key);
-        if (exists)
+        var client = await clientAdminService.CreateAsync(request.Key, request.DisplayName);
+        if (client is null)
         {
             return this.Conflict(new { error = "A client with that key already exists." });
         }
-
-        var client = new ClientRecord
-        {
-            Id = Guid.NewGuid(),
-            Key = request.Key,
-            DisplayName = request.DisplayName,
-            IsActive = true,
-            CreatedAt = DateTimeOffset.UtcNow,
-        };
-        dbContext.Clients.Add(client);
-        await dbContext.SaveChangesAsync();
 
         return this.CreatedAtAction(
             nameof(this.GetClient),
@@ -181,8 +165,7 @@ public sealed class ClientsController(
             return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
         }
 
-        var clientExists = await dbContext.Clients.AnyAsync(c => c.Id == clientId, ct);
-        if (!clientExists)
+        if (!await clientAdminService.ExistsAsync(clientId, ct))
         {
             return this.NotFound();
         }
@@ -209,15 +192,8 @@ public sealed class ClientsController(
             return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
         }
 
-        var client = await dbContext.Clients.FindAsync(clientId);
-        if (client is null)
-        {
-            return this.NotFound();
-        }
-
-        dbContext.Clients.Remove(client);
-        await dbContext.SaveChangesAsync();
-        return this.NoContent();
+        var deleted = await clientAdminService.DeleteAsync(clientId);
+        return deleted ? this.NoContent() : this.NotFound();
     }
 
     /// <summary>
@@ -279,13 +255,8 @@ public sealed class ClientsController(
             return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
         }
 
-        var client = await dbContext.Clients.FindAsync(clientId);
-        if (client is null)
-        {
-            return this.NotFound();
-        }
-
-        return this.Ok(ToClientResponse(client));
+        var client = await clientAdminService.GetByIdAsync(clientId);
+        return client is null ? this.NotFound() : this.Ok(ToClientResponse(client));
     }
 
     /// <summary>
@@ -303,10 +274,7 @@ public sealed class ClientsController(
             return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
         }
 
-        var clients = await dbContext.Clients
-            .OrderByDescending(c => c.CreatedAt)
-            .ToListAsync();
-
+        var clients = await clientAdminService.GetAllAsync();
         return this.Ok(clients.Select(ToClientResponse).ToList());
     }
 
@@ -368,25 +336,8 @@ public sealed class ClientsController(
             return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
         }
 
-        var client = await dbContext.Clients.FindAsync(clientId);
-        if (client is null)
-        {
-            return this.NotFound();
-        }
-
-        if (request.IsActive.HasValue)
-        {
-            client.IsActive = request.IsActive.Value;
-        }
-
-        if (request.DisplayName is not null)
-        {
-            client.DisplayName = request.DisplayName;
-        }
-
-        await dbContext.SaveChangesAsync();
-
-        return this.Ok(ToClientResponse(client));
+        var client = await clientAdminService.PatchAsync(clientId, request.IsActive, request.DisplayName);
+        return client is null ? this.NotFound() : this.Ok(ToClientResponse(client));
     }
 
     /// <summary>
@@ -475,8 +426,7 @@ public sealed class ClientsController(
             return this.BadRequest(new { error = "TenantId, ClientId, and Secret are all required." });
         }
 
-        var clientExists = await dbContext.Clients.AnyAsync(c => c.Id == clientId, ct);
-        if (!clientExists)
+        if (!await clientAdminService.ExistsAsync(clientId, ct))
         {
             return this.NotFound();
         }
@@ -520,16 +470,8 @@ public sealed class ClientsController(
             return this.BadRequest(new { error = "ReviewerId must not be an empty GUID." });
         }
 
-        var client = await dbContext.Clients.FindAsync([clientId], ct);
-        if (client is null)
-        {
-            return this.NotFound();
-        }
-
-        client.ReviewerId = request.ReviewerId;
-        await dbContext.SaveChangesAsync(ct);
-
-        return this.NoContent();
+        var found = await clientAdminService.SetReviewerIdentityAsync(clientId, request.ReviewerId, ct);
+        return found ? this.NoContent() : this.NotFound();
     }
 
     /// <summary>Client response — key and ADO secret are never included.</summary>
