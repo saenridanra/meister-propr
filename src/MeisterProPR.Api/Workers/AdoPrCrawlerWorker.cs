@@ -5,7 +5,7 @@ using MeisterProPR.Application.Interfaces;
 namespace MeisterProPR.Api.Workers;
 
 /// <summary>Background worker that periodically crawls ADO for assigned PRs and creates review jobs.</summary>
-public sealed class AdoPrCrawlerWorker(
+public sealed partial class AdoPrCrawlerWorker(
     IServiceScopeFactory scopeFactory,
     ReviewJobMetrics metrics,
     IConfiguration configuration,
@@ -20,7 +20,7 @@ public sealed class AdoPrCrawlerWorker(
             intervalSeconds = 10;
         }
 
-        logger.LogInformation("AdoPrCrawlerWorker started. Crawl interval: {Interval}s", intervalSeconds);
+        LogWorkerStarted(logger, intervalSeconds);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(intervalSeconds));
 
         try
@@ -38,7 +38,7 @@ public sealed class AdoPrCrawlerWorker(
             // Normal shutdown
         }
 
-        logger.LogInformation("AdoPrCrawlerWorker stopped.");
+        LogWorkerStopped(logger);
     }
 
     private async Task RunCrawlCycleAsync(CancellationToken ct)
@@ -53,7 +53,7 @@ public sealed class AdoPrCrawlerWorker(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception in PR crawl cycle — worker continues");
+            LogCrawlCycleError(logger, ex);
         }
         finally
         {
@@ -61,4 +61,13 @@ public sealed class AdoPrCrawlerWorker(
             metrics.CrawlDuration.Record(sw.Elapsed.TotalSeconds);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "AdoPrCrawlerWorker started (interval: {IntervalSeconds}s)")]
+    private static partial void LogWorkerStarted(ILogger logger, int intervalSeconds);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "AdoPrCrawlerWorker stopped")]
+    private static partial void LogWorkerStopped(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "AdoPrCrawlerWorker: unhandled exception in crawl cycle — worker continues")]
+    private static partial void LogCrawlCycleError(ILogger logger, Exception ex);
 }

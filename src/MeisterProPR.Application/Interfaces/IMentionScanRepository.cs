@@ -7,8 +7,6 @@ namespace MeisterProPR.Application.Interfaces;
 /// </summary>
 public interface IMentionScanRepository
 {
-    // ── Project-level watermark ───────────────────────────────────────────────
-
     /// <summary>
     ///     Gets the project-level scan watermark for a crawl configuration,
     ///     or <c>null</c> if no scan has been performed yet.
@@ -27,8 +25,6 @@ public interface IMentionScanRepository
     Task UpsertProjectScanAsync(
         MentionProjectScan record,
         CancellationToken ct = default);
-
-    // ── PR-level watermark ────────────────────────────────────────────────────
 
     /// <summary>
     ///     Gets the per-PR scan watermark, or <c>null</c> if this PR has not been scanned before.

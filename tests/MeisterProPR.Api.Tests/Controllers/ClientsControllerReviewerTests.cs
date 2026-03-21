@@ -181,7 +181,6 @@ public sealed class ClientsControllerReviewerTests(ClientsControllerReviewerTest
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ── Factory ───────────────────────────────────────────────────────────────
 
     public sealed class ReviewerApiFactory : WebApplicationFactory<Program>
     {

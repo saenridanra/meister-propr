@@ -77,12 +77,15 @@ public sealed partial class AdoAssignedPrFetcher(
             }
             catch (Exception ex)
             {
-                logger.LogWarning(ex, "Failed to get iterations for PR #{PrId}", pr.PullRequestId);
+                LogIterationFetchWarning(logger, pr.PullRequestId, ex);
             }
         }
 
         return results;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to get iterations for PR #{PrId}")]
+    private static partial void LogIterationFetchWarning(ILogger logger, int prId, Exception ex);
 
     [LoggerMessage(
         EventId = 5002,

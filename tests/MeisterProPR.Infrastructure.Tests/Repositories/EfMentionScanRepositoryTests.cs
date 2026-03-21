@@ -67,7 +67,6 @@ public sealed class EfMentionScanRepositoryTests(PostgresContainerFixture fixtur
         await this._dbContext.DisposeAsync();
     }
 
-    // ── Project scan watermark ────────────────────────────────────────────────
 
     [Fact]
     public async Task GetProjectScanAsync_WhenNotExists_ReturnsNull()
@@ -106,7 +105,6 @@ public sealed class EfMentionScanRepositoryTests(PostgresContainerFixture fixtur
         Assert.True(retrieved.LastScannedAt > DateTimeOffset.UtcNow.AddMinutes(-5));
     }
 
-    // ── PR scan watermark ─────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetPrScanAsync_WhenNotExists_ReturnsNull()

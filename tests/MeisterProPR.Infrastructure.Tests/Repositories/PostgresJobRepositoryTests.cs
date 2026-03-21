@@ -46,7 +46,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         return new ReviewJob(Guid.NewGuid(), clientId ?? Guid.NewGuid(), orgUrl, projectId, repoId, prId, iterationId);
     }
 
-    // ── Add / GetById ─────────────────────────────────────────────────────────
 
     [Fact]
     public void Add_ThenGetById_ReturnsJob()
@@ -95,7 +94,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.Null(found);
     }
 
-    // ── FindActiveJob ─────────────────────────────────────────────────────────
 
     [Fact]
     public void FindActiveJob_ReturnsPendingJob()
@@ -113,7 +111,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.Equal(job.Id, found.Id);
     }
 
-    // ── GetAllForClient ───────────────────────────────────────────────────────
 
     [Fact]
     public void GetAllForClient_ReturnsOnlyMatchingClientJobs()
@@ -148,7 +145,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.Single(page3);
     }
 
-    // ── GetAllJobsAsync (T047) ────────────────────────────────────────────────
 
     [Fact]
     public async Task GetAllJobsAsync_ReturnsAllJobsNewestFirst()
@@ -187,7 +183,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.Null(result);
     }
 
-    // ── GetPendingJobs ────────────────────────────────────────────────────────
 
     [Fact]
     public void GetPendingJobs_OrderedOldestFirst()
@@ -211,7 +206,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.Empty(result);
     }
 
-    // ── GetProcessingJobsAsync (T047) ─────────────────────────────────────────
 
     [Fact]
     public async Task GetProcessingJobsAsync_ReturnsOnlyProcessingJobs()
@@ -227,7 +221,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.Equal(j1.Id, result[0].Id);
     }
 
-    // ── SetFailed ─────────────────────────────────────────────────────────────
 
     [Fact]
     public void SetFailed_TransitionsToFailed()
@@ -243,7 +236,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.NotNull(fetched.CompletedAt);
     }
 
-    // ── SetResult ─────────────────────────────────────────────────────────────
 
     [Fact]
     public void SetResult_TransitionsToCompleted()
@@ -261,7 +253,6 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
         Assert.NotNull(fetched.CompletedAt);
     }
 
-    // ── TryTransition ─────────────────────────────────────────────────────────
 
     [Fact]
     public void TryTransition_PendingToProcessing_ReturnsTrue()

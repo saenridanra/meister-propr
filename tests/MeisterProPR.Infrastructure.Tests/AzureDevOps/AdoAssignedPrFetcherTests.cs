@@ -314,7 +314,6 @@ public sealed class AdoAssignedPrFetcherTests
             .GetByClientIdAsync(DefaultConfig.ClientId, Arg.Any<CancellationToken>());
     }
 
-    // ── Per-client credential tests (T019) ───────────────────────────────────
 
     [Fact]
     public async Task GetAssignedOpenPullRequestsAsync_WithPerClientCredentials_LooksUpCredentials()

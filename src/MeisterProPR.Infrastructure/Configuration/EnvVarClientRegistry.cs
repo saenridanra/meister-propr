@@ -5,10 +5,16 @@ using Microsoft.Extensions.Configuration;
 
 namespace MeisterProPR.Infrastructure.Configuration;
 
+/// <summary>
+///     In-memory client registry seeded from the <c>MEISTER_CLIENT_KEYS</c> configuration value.
+///     Used in non-DB mode; deterministic GUIDs are derived from each key string.
+/// </summary>
 public sealed class EnvVarClientRegistry : IClientRegistry
 {
     private readonly Dictionary<string, Guid> _keys;
 
+    /// <summary>Initialises the registry by parsing <c>MEISTER_CLIENT_KEYS</c> from configuration.</summary>
+    /// <param name="configuration">The application configuration.</param>
     // Use IConfiguration so values come from env vars, user-secrets, appsettings, etc.
     public EnvVarClientRegistry(IConfiguration configuration)
     {
@@ -32,11 +38,13 @@ public sealed class EnvVarClientRegistry : IClientRegistry
         this._keys = parsed.ToDictionary(k => k, DeterministicGuid, StringComparer.Ordinal);
     }
 
+    /// <inheritdoc />
     public bool IsValidKey(string clientKey)
     {
         return this._keys.ContainsKey(clientKey);
     }
 
+    /// <inheritdoc />
     public Task<Guid?> GetClientIdByKeyAsync(string key, CancellationToken ct = default)
     {
         var id = this._keys.TryGetValue(key, out var guid) ? (Guid?)guid : null;

@@ -334,7 +334,6 @@ public class ReviewOrchestrationServiceTests
                 Arg.Any<CancellationToken>());
     }
 
-    // ── EC-002: PR abandoned/closed while Processing ──────────────────────────
 
     [Theory]
     [InlineData(PrStatus.Abandoned)]

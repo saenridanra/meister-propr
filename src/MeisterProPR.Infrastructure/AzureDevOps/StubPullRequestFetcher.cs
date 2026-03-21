@@ -10,8 +10,9 @@ namespace MeisterProPR.Infrastructure.AzureDevOps;
 ///     Returns a hardcoded fake pull request instead of contacting Azure DevOps.
 ///     Enable by setting <c>ADO_STUB_PR=true</c> in user secrets / environment variables.
 /// </summary>
-public sealed class StubPullRequestFetcher(ILogger<StubPullRequestFetcher> logger) : IPullRequestFetcher
+public sealed partial class StubPullRequestFetcher(ILogger<StubPullRequestFetcher> logger) : IPullRequestFetcher
 {
+    /// <inheritdoc />
     public Task<PullRequest> FetchAsync(
         string organizationUrl,
         string projectId,
@@ -21,10 +22,7 @@ public sealed class StubPullRequestFetcher(ILogger<StubPullRequestFetcher> logge
         Guid? clientId = null,
         CancellationToken cancellationToken = default)
     {
-        logger.LogWarning(
-            "ADO_STUB_PR is enabled – returning a fake pull request for job PR#{PrId}. " +
-            "No real Azure DevOps connection will be made.",
-            pullRequestId);
+        LogStubFetch(logger, pullRequestId);
 
         var changedFiles = new List<ChangedFile>
         {
@@ -100,4 +98,9 @@ public sealed class StubPullRequestFetcher(ILogger<StubPullRequestFetcher> logge
 
         return Task.FromResult(pr);
     }
+
+    [LoggerMessage(
+        Level = LogLevel.Warning,
+        Message = "ADO_STUB_PR is enabled — returning a fake pull request for PR#{PrId}. No real Azure DevOps connection will be made.")]
+    private static partial void LogStubFetch(ILogger logger, int prId);
 }

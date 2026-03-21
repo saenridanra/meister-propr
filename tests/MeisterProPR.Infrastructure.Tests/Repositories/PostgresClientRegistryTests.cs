@@ -34,7 +34,6 @@ public sealed class PostgresClientRegistryTests(PostgresContainerFixture fixture
         this._registry = new PostgresClientRegistry(this._dbContext, NullLogger<PostgresClientRegistry>.Instance);
     }
 
-    // ── GetClientIdByKeyAsync (T046) ──────────────────────────────────────────
 
     [Fact]
     public async Task GetClientIdByKeyAsync_ReturnsGuid_ForValidActiveKey()
@@ -86,7 +85,6 @@ public sealed class PostgresClientRegistryTests(PostgresContainerFixture fixture
         Assert.False(this._registry.IsValidKey("totally-unknown-key"));
     }
 
-    // ── IsValidKey ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task IsValidKey_ReturnsTrue_ForActiveKey()

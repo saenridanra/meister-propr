@@ -73,7 +73,6 @@ public sealed class EfMentionReplyJobRepositoryTests(PostgresContainerFixture fi
             mentionText);
     }
 
-    // ── AddAsync / GetPendingAsync ─────────────────────────────────────────────
 
     [Fact]
     public async Task AddAsync_ThenGetPendingAsync_ReturnsJob()
@@ -87,7 +86,6 @@ public sealed class EfMentionReplyJobRepositoryTests(PostgresContainerFixture fi
         Assert.Equal(MentionJobStatus.Pending, pending[0].Status);
     }
 
-    // ── ExistsForCommentAsync ──────────────────────────────────────────────────
 
     [Fact]
     public async Task ExistsForCommentAsync_WhenJobExists_ReturnsTrue()
@@ -106,7 +104,6 @@ public sealed class EfMentionReplyJobRepositoryTests(PostgresContainerFixture fi
         Assert.False(exists);
     }
 
-    // ── TryTransitionAsync ────────────────────────────────────────────────────
 
     [Fact]
     public async Task TryTransitionAsync_ValidTransition_ReturnsTrueAndUpdatesStatus()
@@ -136,7 +133,6 @@ public sealed class EfMentionReplyJobRepositoryTests(PostgresContainerFixture fi
         Assert.Single(pending);
     }
 
-    // ── SetCompletedAsync / SetFailedAsync ────────────────────────────────────
 
     [Fact]
     public async Task SetCompletedAsync_UpdatesStatusAndCompletedAt()
@@ -164,7 +160,6 @@ public sealed class EfMentionReplyJobRepositoryTests(PostgresContainerFixture fi
         Assert.Empty(pending);
     }
 
-    // ── ResetStuckProcessingAsync ─────────────────────────────────────────────
 
     [Fact]
     public async Task ResetStuckProcessingAsync_ResetsProcessingJobsToPending()
@@ -181,7 +176,6 @@ public sealed class EfMentionReplyJobRepositoryTests(PostgresContainerFixture fi
         Assert.Equal(MentionJobStatus.Pending, pending[0].Status);
     }
 
-    // ── Unique constraint (deduplication) ────────────────────────────────────
 
     [Fact]
     public async Task AddAsync_DuplicateComment_ThrowsOnUniqueViolation()

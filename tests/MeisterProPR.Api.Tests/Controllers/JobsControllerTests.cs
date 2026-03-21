@@ -18,7 +18,6 @@ public sealed class JobsControllerTests(JobsControllerTests.JobsApiFactory facto
 {
     private const string ValidAdminKey = "admin-key-min-16-chars-ok";
 
-    // ── Pagination ────────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetJobs_DefaultPagination_Returns200WithTotalAndItems()
@@ -36,7 +35,6 @@ public sealed class JobsControllerTests(JobsControllerTests.JobsApiFactory facto
         Assert.True(body.RootElement.TryGetProperty("items", out _));
     }
 
-    // ── S1 fix: clientId in response, not clientKey ───────────────────────────
 
     [Fact]
     public async Task GetJobs_ResponseItems_DoNotExposeRawClientKey()
@@ -87,7 +85,6 @@ public sealed class JobsControllerTests(JobsControllerTests.JobsApiFactory facto
         }
     }
 
-    // ── Performance: SC-004 / T048 ────────────────────────────────────────────
 
     /// <summary>
     ///     Verifies GET /jobs?limit=100 responds in under 2 seconds even with 10,000 seeded jobs.
@@ -140,7 +137,6 @@ public sealed class JobsControllerTests(JobsControllerTests.JobsApiFactory facto
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ── Authorization ─────────────────────────────────────────────────────────
 
     [Fact]
     public async Task GetJobs_WithValidAdminKey_Returns200()

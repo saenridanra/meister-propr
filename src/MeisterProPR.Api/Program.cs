@@ -47,7 +47,6 @@ try
     var dbConnectionString = builder.Configuration["DB_CONNECTION_STRING"];
     var isDbMode = !string.IsNullOrWhiteSpace(dbConnectionString);
 
-    // ── Validate required config keys ─────────────────────────────────────────
     // Validation runs after CreateBuilder so builder.Configuration includes all
     // sources (env vars, user secrets, appsettings) and WebApplicationFactory
     // can inject overrides via UseSetting before these checks run.
@@ -63,7 +62,6 @@ try
         RequireConfig(builder.Configuration, "MEISTER_CLIENT_KEYS");
     }
 
-    // ── Serilog ───────────────────────────────────────────────────────────────
     builder.Host.UseSerilog((context, services, configuration) =>
     {
         configuration
@@ -84,15 +82,12 @@ try
         }
     });
 
-    // ── Host options ──────────────────────────────────────────────────────────
     builder.Services.Configure<HostOptions>(opts =>
         opts.ShutdownTimeout = TimeSpan.FromMinutes(3));
 
-    // ── Infrastructure ────────────────────────────────────────────────────────
     builder.Services.AddInfrastructure(builder.Configuration);
     builder.Services.AddTransient<ReviewOrchestrationService>();
 
-    // ── Crawler service (scope-safe: PrCrawlService is scoped, worker resolves per tick) ──
     // Only registered in DB mode — PrCrawlService depends on ICrawlConfigurationRepository
     // which is only available when DB_CONNECTION_STRING is configured.
     if (isDbMode)
@@ -102,7 +97,6 @@ try
         builder.Services.AddScoped<IMentionReplyService, MentionReplyService>();
     }
 
-    // ── Background workers ────────────────────────────────────────────────────
     // Register ReviewJobWorker as singleton so WorkerHealthCheck can inject it by concrete type,
     // then forward the same instance as IHostedService.
     builder.Services.AddSingleton<ReviewJobWorker>();
@@ -113,7 +107,6 @@ try
     builder.Services.AddSingleton<AdoPrCrawlerWorker>();
     builder.Services.AddHostedService(sp => sp.GetRequiredService<AdoPrCrawlerWorker>());
 
-    // ── Mention scan pipeline (Channel + workers) ─────────────────────────────
     // MentionScanWorker (producer) and MentionReplyWorker (consumer) share a single bounded
     // Channel<MentionReplyJob>. Channel capacity is 1000; writer blocks when full (Wait mode).
     // Both workers only run in DB mode — without DB there is no persistent scan state.
@@ -137,7 +130,6 @@ try
         builder.Services.AddHostedService(sp => sp.GetRequiredService<MentionReplyWorker>());
     }
 
-    // ── CORS ──────────────────────────────────────────────────────────────────
     // Fixed origins: testbed (localhost:3000) and Azure DevOps.
     // Additional origins can be added via CORS_ORIGINS (comma-separated).
     var fixedOrigins = new[]
@@ -169,12 +161,10 @@ try
         });
     });
 
-    // ── MVC ───────────────────────────────────────────────────────────────────
     builder.Services.AddControllers()
         .AddJsonOptions(opts =>
             opts.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
-    // ── OpenTelemetry ─────────────────────────────────────────────────────────
     builder.Services.AddSingleton<ReviewJobMetrics>();
 
     builder.Services.AddOpenTelemetry()
@@ -195,7 +185,6 @@ try
             .AddAspNetCoreInstrumentation()
             .AddPrometheusExporter());
 
-    // ── Swashbuckle ───────────────────────────────────────────────────────────
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen(options =>
     {
@@ -205,7 +194,6 @@ try
         }
     });
 
-    // ── Health checks ─────────────────────────────────────────────────────────
     var healthChecksBuilder = builder.Services.AddHealthChecks()
         .AddCheck<WorkerHealthCheck>("worker");
 
@@ -214,11 +202,9 @@ try
         healthChecksBuilder.AddCheck<DatabaseHealthCheck>("database");
     }
 
-    // ══════════════════════════════════════════════════════════════════════════
     var app = builder.Build();
-    // ══════════════════════════════════════════════════════════════════════════
 
-    // ── DB migration + bootstrap + startup recovery (DB mode only) ────────────
+    // DB migration + bootstrap + startup recovery (DB mode only)
     if (isDbMode)
     {
         using var scope = app.Services.CreateScope();

@@ -25,7 +25,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
     private const string ValidAdminKey = "admin-key-min-16-chars-ok";
     private const string ValidClientKey = "client-key-min-16-chars-ok";
 
-    // ── DELETE /clients/{clientId}/ado-credentials (T029) ────────────────────
 
     [Fact]
     public async Task DeleteAdoCredentials_ExistingClient_Returns204()
@@ -62,7 +61,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ── GET /clients/{clientId} — no secret in response (T032) ───────────────
 
     [Fact]
     public async Task GetClient_ResponseDoesNotContainSecret()
@@ -95,7 +93,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.False(body.RootElement.GetProperty("hasAdoCredentials").GetBoolean());
     }
 
-    // ── GET /clients — no secret in list response (T033) ─────────────────────
 
     [Fact]
     public async Task GetClients_ListResponseDoesNotContainSecret()
@@ -111,7 +108,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.DoesNotContain("secret", body, StringComparison.OrdinalIgnoreCase);
     }
 
-    // ── GET /clients (T030) ───────────────────────────────────────────────────
 
     [Fact]
     public async Task GetClients_WithValidAdminKey_Returns200WithNoKeys()
@@ -128,7 +124,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.DoesNotContain("\"key\"", body, StringComparison.OrdinalIgnoreCase);
     }
 
-    // ── GET /clients/{clientId}/crawl-configurations (T031) ──────────────────
 
     [Fact]
     public async Task GetCrawlConfigs_WithOwnerKey_Returns200()
@@ -156,7 +151,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    // ── PATCH /clients/{id} (T030) ────────────────────────────────────────────
 
     [Fact]
     public async Task PatchClient_ToggleIsActive_Returns200()
@@ -239,7 +233,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ── POST /clients (T030) ──────────────────────────────────────────────────
 
     [Fact]
     public async Task PostClients_WithValidAdminKey_Returns201()
@@ -260,7 +253,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.True(body.RootElement.GetProperty("isActive").GetBoolean());
     }
 
-    // ── POST /clients/{clientId}/crawl-configurations (T031) ─────────────────
 
     [Fact]
     public async Task PostCrawlConfig_WithOwnerKey_Returns201()
@@ -344,7 +336,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
-    // ── PUT /clients/{clientId}/ado-credentials (T018) ────────────────────────
 
     [Fact]
     public async Task PutAdoCredentials_WithValidFields_Returns204()
@@ -365,7 +356,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
-    // ── Factory ───────────────────────────────────────────────────────────────
 
     public sealed class ClientsApiFactory : WebApplicationFactory<Program>
     {

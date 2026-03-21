@@ -6,10 +6,15 @@ using MeisterProPR.Domain.ValueObjects;
 
 namespace MeisterProPR.Infrastructure.Repositories;
 
+/// <summary>
+///     Thread-safe in-memory implementation of <see cref="IJobRepository" /> backed by a
+///     <see cref="ConcurrentDictionary{TKey,TValue}" />. Used in non-DB mode and for tests.
+/// </summary>
 public sealed class InMemoryJobRepository : IJobRepository
 {
     private readonly ConcurrentDictionary<Guid, ReviewJob> _jobs = new();
 
+    /// <inheritdoc />
     public bool TryTransition(Guid id, JobStatus from, JobStatus to)
     {
         if (!this._jobs.TryGetValue(id, out var job))
@@ -29,6 +34,7 @@ public sealed class InMemoryJobRepository : IJobRepository
         }
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<ReviewJob> GetAllForClient(Guid clientId)
     {
         return this._jobs.Values
@@ -37,6 +43,7 @@ public sealed class InMemoryJobRepository : IJobRepository
             .ToList();
     }
 
+    /// <inheritdoc />
     public IReadOnlyList<ReviewJob> GetPendingJobs()
     {
         return this._jobs.Values
@@ -45,6 +52,7 @@ public sealed class InMemoryJobRepository : IJobRepository
             .ToList();
     }
 
+    /// <inheritdoc />
     public ReviewJob? FindActiveJob(
         string organizationUrl,
         string projectId,
@@ -61,11 +69,13 @@ public sealed class InMemoryJobRepository : IJobRepository
             j.Status != JobStatus.Failed);
     }
 
+    /// <inheritdoc />
     public ReviewJob? GetById(Guid id)
     {
         return this._jobs.GetValueOrDefault(id);
     }
 
+    /// <inheritdoc />
     public Task<(int total, IReadOnlyList<ReviewJob> items)> GetAllJobsAsync(
         int limit,
         int offset,
@@ -84,6 +94,7 @@ public sealed class InMemoryJobRepository : IJobRepository
         return Task.FromResult((total, items));
     }
 
+    /// <inheritdoc />
     public Task<IReadOnlyList<ReviewJob>> GetProcessingJobsAsync(CancellationToken ct = default)
     {
         var result = (IReadOnlyList<ReviewJob>)this._jobs.Values
@@ -92,11 +103,13 @@ public sealed class InMemoryJobRepository : IJobRepository
         return Task.FromResult(result);
     }
 
+    /// <inheritdoc />
     public void Add(ReviewJob job)
     {
         this._jobs[job.Id] = job;
     }
 
+    /// <inheritdoc />
     public void SetFailed(Guid id, string errorMessage)
     {
         if (this._jobs.TryGetValue(id, out var job))
@@ -110,6 +123,7 @@ public sealed class InMemoryJobRepository : IJobRepository
         }
     }
 
+    /// <inheritdoc />
     public void SetResult(Guid id, ReviewResult result)
     {
         if (this._jobs.TryGetValue(id, out var job))

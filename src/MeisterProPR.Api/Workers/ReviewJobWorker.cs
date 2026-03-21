@@ -7,7 +7,7 @@ using MeisterProPR.Domain.Enums;
 namespace MeisterProPR.Api.Workers;
 
 /// <summary>Background worker that pulls pending jobs and runs reviews.</summary>
-public sealed class ReviewJobWorker(
+public sealed partial class ReviewJobWorker(
     IJobRepository jobRepository,
     IServiceScopeFactory scopeFactory,
     ILogger<ReviewJobWorker> logger) : BackgroundService
@@ -21,7 +21,7 @@ public sealed class ReviewJobWorker(
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         this.IsRunning = true;
-        logger.LogInformation("ReviewJobWorker started.");
+        LogWorkerStarted(logger);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(2));
 
         try
@@ -58,11 +58,11 @@ public sealed class ReviewJobWorker(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "Error during shutdown drain.");
+                    LogShutdownDrainError(logger, ex);
                 }
             }
 
-            logger.LogInformation("ReviewJobWorker stopped.");
+            LogWorkerStopped(logger);
         }
     }
 
@@ -81,8 +81,20 @@ public sealed class ReviewJobWorker(
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Unhandled exception processing job {JobId}", job.Id);
+            LogJobProcessingError(logger, job.Id, ex);
             jobRepository.SetFailed(job.Id, ex.Message);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "ReviewJobWorker started")]
+    private static partial void LogWorkerStarted(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "ReviewJobWorker stopped")]
+    private static partial void LogWorkerStopped(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ReviewJobWorker: error during shutdown drain")]
+    private static partial void LogShutdownDrainError(ILogger logger, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "ReviewJobWorker: unhandled exception processing job {JobId}")]
+    private static partial void LogJobProcessingError(ILogger logger, Guid jobId, Exception ex);
 }

@@ -8,7 +8,7 @@ using Microsoft.TeamFoundation.SourceControl.WebApi;
 
 namespace MeisterProPR.Infrastructure.AzureDevOps;
 
-public partial class AdoPullRequestFetcher(
+public sealed partial class AdoPullRequestFetcher(
     VssConnectionFactory connectionFactory,
     IClientAdoCredentialRepository credentialRepository,
     ILogger<AdoPullRequestFetcher> logger) : IPullRequestFetcher
@@ -108,7 +108,7 @@ public partial class AdoPullRequestFetcher(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "Failed to fetch head content for {Path} at commit {Commit}", path, sourceCommit);
+                    LogHeadContentFetchWarning(logger, path, sourceCommit, ex);
                     headContent = "";
                 }
             }
@@ -140,7 +140,7 @@ public partial class AdoPullRequestFetcher(
                 }
                 catch (Exception ex)
                 {
-                    logger.LogWarning(ex, "Failed to fetch base content for {Path} at commit {Commit}", path, baseCommit);
+                    LogBaseContentFetchWarning(logger, path, baseCommit, ex);
                     baseContent = "";
                 }
             }
@@ -182,6 +182,12 @@ public partial class AdoPullRequestFetcher(
 
         return sb.ToString();
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to fetch head content for {Path} at commit {Commit}")]
+    private static partial void LogHeadContentFetchWarning(ILogger logger, string path, string commit, Exception ex);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Failed to fetch base content for {Path} at commit {Commit}")]
+    private static partial void LogBaseContentFetchWarning(ILogger logger, string path, string commit, Exception ex);
 
     [LoggerMessage(
         Level = LogLevel.Warning,

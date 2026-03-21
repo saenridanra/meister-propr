@@ -12,7 +12,6 @@ public class AdoCommentPosterDeduplicationTests
     private static readonly Guid BotId = new("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
     private static readonly Guid UserId = new("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
 
-    // ── HasBotSummary ─────────────────────────────────────────────────────────
 
     [Fact]
     public void HasBotSummary_WithExistingSummaryThread_ReturnsTrue()
@@ -92,7 +91,6 @@ public class AdoCommentPosterDeduplicationTests
         Assert.False(AdoCommentPoster.HasBotSummary(threads, null));
     }
 
-    // ── HasBotThreadAt ────────────────────────────────────────────────────────
 
     [Fact]
     public void HasBotThreadAt_BotThreadAtSameFileAndLine_ReturnsTrue()
@@ -172,7 +170,6 @@ public class AdoCommentPosterDeduplicationTests
         Assert.False(AdoCommentPoster.HasBotThreadAt(threads, "/src/Foo.cs", 42, BotId));
     }
 
-    // ── IsBotAuthor ───────────────────────────────────────────────────────────
 
     [Fact]
     public void IsBotAuthor_MatchingGuids_ReturnsTrue()

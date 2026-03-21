@@ -8,15 +8,6 @@ public sealed class ReviewJobMetrics : IDisposable
 {
     private readonly Meter _meter;
 
-    /// <summary>Histogram measuring PR crawl cycle durations in seconds.</summary>
-    public readonly Histogram<double> CrawlDuration;
-
-    /// <summary>Counter tracking total number of PRs discovered by the crawler.</summary>
-    public readonly Counter<long> CrawlPrsDiscovered;
-
-    /// <summary>Histogram measuring review job durations in seconds.</summary>
-    public readonly Histogram<double> JobDuration;
-
     /// <summary>Creates the metrics meter and instruments.</summary>
     /// <param name="jobRepository">Repository used to observe queue depth.</param>
     public ReviewJobMetrics(IJobRepository jobRepository)
@@ -40,6 +31,15 @@ public sealed class ReviewJobMetrics : IDisposable
             "s",
             "Duration of a complete crawl cycle across all active configurations");
     }
+
+    /// <summary>Histogram measuring PR crawl cycle durations in seconds.</summary>
+    public Histogram<double> CrawlDuration { get; }
+
+    /// <summary>Counter tracking total number of PRs discovered by the crawler.</summary>
+    public Counter<long> CrawlPrsDiscovered { get; }
+
+    /// <summary>Histogram measuring review job durations in seconds.</summary>
+    public Histogram<double> JobDuration { get; }
 
     /// <summary>Disposes the underlying meter.</summary>
     public void Dispose()

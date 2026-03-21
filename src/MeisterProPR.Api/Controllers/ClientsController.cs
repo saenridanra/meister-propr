@@ -27,7 +27,6 @@ public sealed class ClientsController(
             client.AdoClientId,
             client.ReviewerId);
     }
-    // ── Client-Scoped: Crawl Configurations ──────────────────────────────────
 
     /// <summary>
     ///     Adds a crawl configuration for the specified client. Requires <c>X-Client-Key</c> that owns the client.
@@ -108,8 +107,6 @@ public sealed class ClientsController(
                 config.IsActive,
                 config.CreatedAt));
     }
-
-    // ── Admin: Client Management ─────────────────────────────────────────────
 
     /// <summary>
     ///     Registers a new client. Requires <c>X-Admin-Key</c>.
@@ -555,8 +552,6 @@ public sealed class ClientsController(
         int CrawlIntervalSeconds,
         bool IsActive,
         DateTimeOffset CreatedAt);
-
-    // ── Request / Response DTOs ──────────────────────────────────────────────
 
     /// <summary>Request body for creating a client.</summary>
     public sealed record CreateClientRequest(string Key, string DisplayName);

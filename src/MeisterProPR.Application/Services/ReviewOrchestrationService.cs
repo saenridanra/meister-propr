@@ -16,7 +16,7 @@ namespace MeisterProPR.Application.Services;
 /// <param name="reviewerManager">Adds the AI identity as an optional reviewer on the PR.</param>
 /// <param name="clientRegistry">Registry for looking up per-client configuration.</param>
 /// <param name="logger">The logger for logging review orchestration events.</param>
-public sealed class ReviewOrchestrationService(
+public sealed partial class ReviewOrchestrationService(
     IJobRepository jobs,
     IPullRequestFetcher prFetcher,
     IAiReviewCore aiCore,
@@ -33,7 +33,7 @@ public sealed class ReviewOrchestrationService(
         // Guard 1: client must be associated
         if (job.ClientId is null)
         {
-            logger.LogWarning("Job {JobId} has no client associated — failing", job.Id);
+            LogNoClientAssociated(logger, job.Id);
             jobs.SetFailed(job.Id, "No client associated with job");
             return;
         }
@@ -42,17 +42,14 @@ public sealed class ReviewOrchestrationService(
         var reviewerId = await clientRegistry.GetReviewerIdAsync(job.ClientId.Value, ct);
         if (reviewerId is null)
         {
-            logger.LogWarning(
-                "Reviewer identity not configured for client {ClientId} — failing job {JobId}",
-                job.ClientId,
-                job.Id);
+            LogReviewerIdentityMissing(logger, job.ClientId.Value, job.Id);
             jobs.SetFailed(job.Id, $"Reviewer identity not configured for client {job.ClientId}");
             return;
         }
 
         try
         {
-            logger.LogInformation("Starting review for job {JobId} PR#{PrId}", job.Id, job.PullRequestId);
+            LogReviewStarted(logger, job.Id, job.PullRequestId);
 
             var pr = await prFetcher.FetchAsync(
                 job.OrganizationUrl,
@@ -66,11 +63,7 @@ public sealed class ReviewOrchestrationService(
             // EC-002: PR was closed or abandoned before the review could run.
             if (pr.Status != PrStatus.Active)
             {
-                logger.LogWarning(
-                    "PR #{PrId} is no longer active (status: {Status}). Marking job {JobId} as failed.",
-                    job.PullRequestId,
-                    pr.Status,
-                    job.Id);
+                LogPrNoLongerActive(logger, job.PullRequestId, pr.Status, job.Id);
                 jobs.SetFailed(job.Id, "PR was closed or abandoned before review could begin");
                 return;
             }
@@ -99,12 +92,30 @@ public sealed class ReviewOrchestrationService(
                 ct);
 
             jobs.SetResult(job.Id, result);
-            logger.LogInformation("Completed review for job {JobId}", job.Id);
+            LogReviewCompleted(logger, job.Id);
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Review failed for job {JobId}: {Error}", job.Id, ex.Message);
+            LogReviewFailed(logger, job.Id, ex);
             jobs.SetFailed(job.Id, ex.Message);
         }
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Job {JobId} has no client associated — failing")]
+    private static partial void LogNoClientAssociated(ILogger logger, Guid jobId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Reviewer identity not configured for client {ClientId} — failing job {JobId}")]
+    private static partial void LogReviewerIdentityMissing(ILogger logger, Guid clientId, Guid jobId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Starting review for job {JobId} PR#{PrId}")]
+    private static partial void LogReviewStarted(ILogger logger, Guid jobId, int prId);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "PR #{PrId} is no longer active (status: {Status}) — failing job {JobId}")]
+    private static partial void LogPrNoLongerActive(ILogger logger, int prId, PrStatus status, Guid jobId);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Completed review for job {JobId}")]
+    private static partial void LogReviewCompleted(ILogger logger, Guid jobId);
+
+    [LoggerMessage(Level = LogLevel.Error, Message = "Review failed for job {JobId}")]
+    private static partial void LogReviewFailed(ILogger logger, Guid jobId, Exception ex);
 }

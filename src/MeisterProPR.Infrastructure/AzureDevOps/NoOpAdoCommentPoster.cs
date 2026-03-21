@@ -9,8 +9,9 @@ namespace MeisterProPR.Infrastructure.AzureDevOps;
 ///     Logs the review result instead of posting it to Azure DevOps.
 ///     Enable by setting ADO_STUB_PR=true in user secrets / environment variables.
 /// </summary>
-public sealed class NoOpAdoCommentPoster(ILogger<NoOpAdoCommentPoster> logger) : IAdoCommentPoster
+public sealed partial class NoOpAdoCommentPoster(ILogger<NoOpAdoCommentPoster> logger) : IAdoCommentPoster
 {
+    /// <inheritdoc />
     public Task PostAsync(
         string organizationUrl,
         string projectId,
@@ -22,20 +23,18 @@ public sealed class NoOpAdoCommentPoster(ILogger<NoOpAdoCommentPoster> logger) :
         IReadOnlyList<PrCommentThread>? existingThreads = null,
         CancellationToken cancellationToken = default)
     {
-        logger.LogWarning(
-            "ADO_STUB_PR is enabled -- skipping comment post for PR#{PrId}. Review summary: {Summary}",
-            pullRequestId,
-            result.Summary);
+        LogSkippingCommentPost(logger, pullRequestId, result.Summary);
         foreach (var comment in result.Comments)
         {
-            logger.LogInformation(
-                "[STUB COMMENT] {Severity} @ {File}:{Line} -- {Message}",
-                comment.Severity,
-                comment.FilePath,
-                comment.LineNumber,
-                comment.Message);
+            LogStubComment(logger, comment.Severity, comment.FilePath, comment.LineNumber, comment.Message);
         }
 
         return Task.CompletedTask;
     }
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "ADO_STUB_PR is enabled — skipping comment post for PR#{PrId}. Review summary: {Summary}")]
+    private static partial void LogSkippingCommentPost(ILogger logger, int prId, string summary);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "[STUB COMMENT] {Severity} @ {File}:{Line} — {Message}")]
+    private static partial void LogStubComment(ILogger logger, object severity, string? file, int? line, string message);
 }

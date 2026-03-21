@@ -6,18 +6,16 @@ using Microsoft.Extensions.Logging;
 namespace MeisterProPR.Infrastructure.Repositories;
 
 /// <summary>Database-backed client registry using PostgreSQL.</summary>
-public sealed class PostgresClientRegistry(
+public sealed partial class PostgresClientRegistry(
     MeisterProPRDbContext dbContext,
     ILogger<PostgresClientRegistry> logger) : IClientRegistry
 {
-    private readonly ILogger<PostgresClientRegistry> _logger = logger;
-
     /// <inheritdoc />
     public bool IsValidKey(string clientKey)
     {
         if (string.IsNullOrWhiteSpace(clientKey))
         {
-            this._logger.LogDebug($"Invalid client key: {clientKey}");
+            LogKeyNullOrWhitespace(logger);
             return false;
         }
 
@@ -29,7 +27,7 @@ public sealed class PostgresClientRegistry(
     {
         if (string.IsNullOrWhiteSpace(key))
         {
-            this._logger.LogError($"Invalid client key: {key}");
+            LogKeyNullOrWhitespace(logger);
             return null;
         }
 
@@ -40,7 +38,7 @@ public sealed class PostgresClientRegistry(
 
         if (client == null)
         {
-            this._logger.LogDebug($"Client not found for key: {key}");
+            LogClientNotFound(logger);
         }
 
         return client;
@@ -54,4 +52,10 @@ public sealed class PostgresClientRegistry(
             .Select(c => c.ReviewerId)
             .FirstOrDefaultAsync(ct);
     }
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Client registry: key is null or whitespace")]
+    private static partial void LogKeyNullOrWhitespace(ILogger logger);
+
+    [LoggerMessage(Level = LogLevel.Debug, Message = "Client registry: no active client found for key")]
+    private static partial void LogClientNotFound(ILogger logger);
 }
