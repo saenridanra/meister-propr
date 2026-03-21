@@ -83,7 +83,6 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IPullRequestFetcher, StubPullRequestFetcher>();
             services.AddScoped<IAdoCommentPoster, NoOpAdoCommentPoster>();
             services.AddScoped<IAssignedPullRequestFetcher, StubAssignedPrFetcher>();
-            services.AddScoped<IIdentityResolver, StubIdentityResolver>();
             services.AddSingleton<IAdoReviewerManager, StubAdoReviewerManager>();
             services.AddSingleton<IActivePrFetcher, StubActivePrFetcher>();
             services.AddScoped<IAdoThreadReplier, StubAdoThreadReplier>();
@@ -95,12 +94,6 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IPullRequestFetcher, AdoPullRequestFetcher>();
             services.AddScoped<IAdoCommentPoster, AdoCommentPoster>();
             services.AddScoped<IAssignedPullRequestFetcher, AdoAssignedPrFetcher>();
-            services.AddHttpClient("AdoIdentity");
-            services.AddScoped<IIdentityResolver>(sp =>
-                new AdoIdentityResolver(
-                    credential,
-                    sp.GetRequiredService<IHttpClientFactory>(),
-                    sp.GetRequiredService<IClientAdoCredentialRepository>()));
             services.AddSingleton<IAdoReviewerManager, AdoReviewerManager>();
             services.AddSingleton<IActivePrFetcher, AdoActivePrFetcher>();
             services.AddScoped<IAdoThreadReplier, AdoThreadReplier>();

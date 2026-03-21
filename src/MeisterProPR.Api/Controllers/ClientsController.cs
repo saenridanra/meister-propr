@@ -8,12 +8,18 @@ namespace MeisterProPR.Api.Controllers;
 
 /// <summary>Manages clients (admin) and crawl configurations (client-scoped).</summary>
 [ApiController]
-public sealed class ClientsController(
+public sealed partial class ClientsController(
     IClientAdminService clientAdminService,
     IClientRegistry clientRegistry,
     ICrawlConfigurationRepository crawlConfigs,
-    IClientAdoCredentialRepository adoCredentialRepository) : ControllerBase
+    IClientAdoCredentialRepository adoCredentialRepository,
+    ILogger<ClientsController> logger) : ControllerBase
 {
+    [LoggerMessage(
+        Level = LogLevel.Information,
+        Message = "Reviewer identity updated for client {ClientId} by {ActorType}")]
+    private static partial void LogReviewerIdentityUpdated(ILogger logger, Guid clientId, string actorType);
+
     private static ClientResponse ToClientResponse(ClientDto client)
     {
         return new ClientResponse(
@@ -452,7 +458,8 @@ public sealed class ClientsController(
     }
 
     /// <summary>
-    ///     Sets or replaces the ADO reviewer identity GUID for a client. Requires <c>X-Admin-Key</c>.
+    ///     Sets or replaces the ADO reviewer identity GUID for a client.
+    ///     Accepts either <c>X-Admin-Key</c> (any client) or <c>X-Client-Key</c> (own client only).
     ///     Until this is set, review jobs for the client will be rejected.
     /// </summary>
     /// <param name="clientId">Client identifier.</param>
@@ -461,12 +468,14 @@ public sealed class ClientsController(
     /// <param name="ct">Cancellation token.</param>
     /// <response code="204">Reviewer identity stored.</response>
     /// <response code="400"><paramref name="request" /> contains an empty GUID.</response>
-    /// <response code="401">Missing or invalid <c>X-Admin-Key</c>.</response>
+    /// <response code="401">Missing or invalid authentication header.</response>
+    /// <response code="403">Caller does not own this client.</response>
     /// <response code="404">Client not found.</response>
     [HttpPut("clients/{clientId:guid}/reviewer-identity")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> PutReviewerIdentity(
         Guid clientId,
@@ -474,9 +483,27 @@ public sealed class ClientsController(
         [FromServices] IValidator<SetReviewerIdentityRequest> validator,
         CancellationToken ct = default)
     {
-        if (this.HttpContext.Items["IsAdmin"] is not true)
+        string actorType;
+
+        if (this.HttpContext.Items["IsAdmin"] is true)
         {
-            return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
+            actorType = "Admin";
+        }
+        else
+        {
+            var callerKey = this.HttpContext.Items["ClientKey"] as string;
+            if (string.IsNullOrWhiteSpace(callerKey))
+            {
+                return this.Unauthorized(new { error = "Valid X-Admin-Key or X-Client-Key required." });
+            }
+
+            var callerId = await clientRegistry.GetClientIdByKeyAsync(callerKey, ct);
+            if (callerId is null || callerId != clientId)
+            {
+                return this.StatusCode(StatusCodes.Status403Forbidden, new { error = "Caller does not own this client." });
+            }
+
+            actorType = "Client";
         }
 
         var validation = this.ValidateRequest(await validator.ValidateAsync(request, ct));
@@ -486,7 +513,57 @@ public sealed class ClientsController(
         }
 
         var found = await clientAdminService.SetReviewerIdentityAsync(clientId, request.ReviewerId, ct);
-        return found ? this.NoContent() : this.NotFound();
+        if (!found)
+        {
+            return this.NotFound();
+        }
+
+        LogReviewerIdentityUpdated(logger, clientId, actorType);
+        return this.NoContent();
+    }
+
+    /// <summary>
+    ///     Returns the profile of the specified client. Requires <c>X-Client-Key</c> that owns the client.
+    ///     Exposes a subset of client data safe for client-level callers; does not include admin-only fields.
+    /// </summary>
+    /// <param name="clientId">Client identifier.</param>
+    /// <param name="ct">Cancellation token.</param>
+    /// <response code="200">Client profile.</response>
+    /// <response code="401">Missing or invalid <c>X-Client-Key</c>.</response>
+    /// <response code="403">Caller does not own this client.</response>
+    /// <response code="404">Client not found.</response>
+    [HttpGet("clients/{clientId:guid}/profile")]
+    [ProducesResponseType(typeof(ClientProfileResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetClientProfile(Guid clientId, CancellationToken ct = default)
+    {
+        var callerKey = this.HttpContext.Items["ClientKey"] as string;
+        if (string.IsNullOrWhiteSpace(callerKey))
+        {
+            return this.Unauthorized(new { error = "Valid X-Client-Key required." });
+        }
+
+        var callerId = await clientRegistry.GetClientIdByKeyAsync(callerKey, ct);
+        if (callerId is null || callerId != clientId)
+        {
+            return this.StatusCode(StatusCodes.Status403Forbidden, new { error = "Caller does not own this client." });
+        }
+
+        var client = await clientAdminService.GetByIdAsync(clientId, ct);
+        if (client is null)
+        {
+            return this.NotFound();
+        }
+
+        return this.Ok(
+            new ClientProfileResponse(
+                client.Id,
+                client.DisplayName,
+                client.IsActive,
+                client.CreatedAt,
+                client.ReviewerId));
     }
 }
 
@@ -529,3 +606,14 @@ public sealed record SetAdoCredentialsRequest(string TenantId, string ClientId, 
 
 /// <summary>Request body for setting the ADO reviewer identity on a client.</summary>
 public sealed record SetReviewerIdentityRequest(Guid ReviewerId);
+
+/// <summary>
+///     Client profile response — exposes only fields safe for client-level callers.
+///     Admin-only fields such as <c>HasAdoCredentials</c> are intentionally omitted.
+/// </summary>
+public sealed record ClientProfileResponse(
+    Guid Id,
+    string DisplayName,
+    bool IsActive,
+    DateTimeOffset CreatedAt,
+    Guid? ReviewerId);

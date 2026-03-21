@@ -34,7 +34,8 @@ public sealed class VssConnectionFactory(TokenCredential credential)
         ClientAdoCredentials? credentials = null,
         CancellationToken ct = default)
     {
-        var cacheKey = $"{organizationUrl}::{credentials?.ClientId ?? "global"}";
+        var normalizedUrl = organizationUrl.TrimEnd('/');
+        var cacheKey = $"{normalizedUrl}::{credentials?.ClientId ?? "global"}";
 
         if (this._cache.TryGetValue(cacheKey, out var cached) &&
             cached.ExpiresOn - DateTimeOffset.UtcNow > ExpiryBuffer)
@@ -48,7 +49,7 @@ public sealed class VssConnectionFactory(TokenCredential credential)
 
         var token = await effectiveCredential.GetTokenAsync(new TokenRequestContext([AdoResourceScope]), ct);
         var conn = new VssConnection(
-            new Uri(organizationUrl),
+            new Uri(normalizedUrl),
             new VssOAuthAccessTokenCredential(token.Token));
 
         this._cache[cacheKey] = (conn, token.ExpiresOn);

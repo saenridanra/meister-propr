@@ -27,7 +27,8 @@
         "display_name": "My Service Principal",
         "ado_tenant_id": "your-azure-tenant-id",
         "ado_client_id": "your-azure-client-id",
-        "ado_client_secret": "your-azure-client-secret"
+        "ado_client_secret": "your-azure-client-secret",
+        "reviewer_id": "00000000-0000-0000-0000-000000000000"
       }
     },
     {
@@ -149,18 +150,44 @@
       "body": {}
     },
     {
-      "_id": "fld_identities",
-      "_type": "request_group",
-      "parentId": "wrk_meisterpropr",
-      "name": "Identities"
+      "_id": "req_clients_put_reviewer_identity_admin",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Set Reviewer Identity (Admin)",
+      "method": "PUT",
+      "url": "{{ base_url }}/clients/{{ client_id }}/reviewer-identity",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Admin-Key", "value": "{{ admin_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reviewerId\": \"{{ reviewer_id }}\"\n}"
+      }
     },
     {
-      "_id": "req_identities_resolve",
+      "_id": "req_clients_put_reviewer_identity_client",
       "_type": "request",
-      "parentId": "fld_identities",
-      "name": "Resolve Identity",
+      "parentId": "fld_clients",
+      "name": "Set Reviewer Identity (Client)",
+      "method": "PUT",
+      "url": "{{ base_url }}/clients/{{ client_id }}/reviewer-identity",
+      "headers": [
+        { "name": "Content-Type", "value": "application/json" },
+        { "name": "X-Client-Key", "value": "{{ client_key }}" }
+      ],
+      "body": {
+        "mimeType": "application/json",
+        "text": "{\n  \"reviewerId\": \"{{ reviewer_id }}\"\n}"
+      }
+    },
+    {
+      "_id": "req_clients_get_profile",
+      "_type": "request",
+      "parentId": "fld_clients",
+      "name": "Get Client Profile",
       "method": "GET",
-      "url": "{{ base_url }}/identities/resolve?orgUrl={{ org_url }}&displayName={{ display_name }}",
+      "url": "{{ base_url }}/clients/{{ client_id }}/profile",
       "headers": [
         { "name": "X-Client-Key", "value": "{{ client_key }}" }
       ],

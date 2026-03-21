@@ -76,6 +76,15 @@ public sealed class ClientsControllerReviewerTests(ClientsControllerReviewerTest
     [Fact]
     public async Task GetClient_BeforeReviewerSet_ReviewerIdIsNull()
     {
+        // Reset reviewer to null to be resilient against test execution order.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeisterProPRDbContext>();
+            var record = await db.Clients.FindAsync(factory.ClientId);
+            record!.ReviewerId = null;
+            await db.SaveChangesAsync();
+        }
+
         var clientId = factory.ClientId;
         var httpClient = factory.CreateClient();
         using var request = new HttpRequestMessage(HttpMethod.Get, $"/clients/{clientId}");
@@ -182,6 +191,182 @@ public sealed class ClientsControllerReviewerTests(ClientsControllerReviewerTest
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    // T001 — PUT with valid X-Client-Key for own client returns 204 and persists
+
+    [Fact]
+    public async Task PutReviewerIdentity_WithClientKey_OwnClient_Returns204()
+    {
+        var reviewerId = Guid.NewGuid();
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/clients/{factory.ClientId}/reviewer-identity");
+        request.Headers.Add("X-Client-Key", ValidClientKey);
+        request.Content = JsonContent.Create(new { reviewerId });
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<MeisterProPRDbContext>();
+        var stored = await db.Clients.FindAsync(factory.ClientId);
+        Assert.Equal(reviewerId, stored!.ReviewerId);
+    }
+
+    // T002 — PUT with valid X-Client-Key but targeting a different client returns 403
+
+    [Fact]
+    public async Task PutReviewerIdentity_WithClientKey_WrongClient_Returns403()
+    {
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/clients/{Guid.NewGuid()}/reviewer-identity");
+        request.Headers.Add("X-Client-Key", ValidClientKey);
+        request.Content = JsonContent.Create(new { reviewerId = Guid.NewGuid() });
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    // T003 — PUT with X-Client-Key and Guid.Empty returns 400
+
+    [Fact]
+    public async Task PutReviewerIdentity_WithClientKey_EmptyGuid_Returns400()
+    {
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/clients/{factory.ClientId}/reviewer-identity");
+        request.Headers.Add("X-Client-Key", ValidClientKey);
+        request.Content = JsonContent.Create(new { reviewerId = Guid.Empty });
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    // T004 — PUT with X-Client-Key, same GUID twice returns 204 both times (idempotent)
+
+    [Fact]
+    public async Task PutReviewerIdentity_WithClientKey_IdempotentSameValue_Returns204()
+    {
+        var reviewerId = Guid.NewGuid();
+        var httpClient = factory.CreateClient();
+
+        using var first = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/clients/{factory.ClientId}/reviewer-identity");
+        first.Headers.Add("X-Client-Key", ValidClientKey);
+        first.Content = JsonContent.Create(new { reviewerId });
+        var firstResponse = await httpClient.SendAsync(first);
+        Assert.Equal(HttpStatusCode.NoContent, firstResponse.StatusCode);
+
+        using var second = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/clients/{factory.ClientId}/reviewer-identity");
+        second.Headers.Add("X-Client-Key", ValidClientKey);
+        second.Content = JsonContent.Create(new { reviewerId });
+        var secondResponse = await httpClient.SendAsync(second);
+        Assert.Equal(HttpStatusCode.NoContent, secondResponse.StatusCode);
+    }
+
+    // T007 — GET /profile with own client key returns 200 with null reviewerId; hasAdoCredentials absent
+
+    [Fact]
+    public async Task GetClientProfile_WithClientKey_NoReviewerSet_Returns200WithNullReviewerId()
+    {
+        // Reset reviewer to null to be resilient against test execution order.
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeisterProPRDbContext>();
+            var record = await db.Clients.FindAsync(factory.ClientId);
+            record!.ReviewerId = null;
+            await db.SaveChangesAsync();
+        }
+
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/clients/{factory.ClientId}/profile");
+        request.Headers.Add("X-Client-Key", ValidClientKey);
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.TryGetProperty("reviewerId", out var reviewerProp));
+        Assert.Equal(JsonValueKind.Null, reviewerProp.ValueKind);
+        Assert.False(body.RootElement.TryGetProperty("hasAdoCredentials", out _));
+    }
+
+    // T008 — GET /profile after reviewer set returns 200 with matching reviewerId
+
+    [Fact]
+    public async Task GetClientProfile_WithClientKey_AfterReviewerSet_Returns200WithReviewerId()
+    {
+        var reviewerId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeisterProPRDbContext>();
+            var client = await db.Clients.FindAsync(factory.ClientId);
+            client!.ReviewerId = reviewerId;
+            await db.SaveChangesAsync();
+        }
+
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/clients/{factory.ClientId}/profile");
+        request.Headers.Add("X-Client-Key", ValidClientKey);
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        Assert.True(body.RootElement.TryGetProperty("reviewerId", out var prop));
+        Assert.Equal(reviewerId.ToString(), prop.GetString());
+
+        // Restore reviewer to null so other tests that assert reviewer is absent are not affected
+        // by execution order (xUnit does not guarantee order within a class).
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<MeisterProPRDbContext>();
+            var client = await db.Clients.FindAsync(factory.ClientId);
+            client!.ReviewerId = null;
+            await db.SaveChangesAsync();
+        }
+    }
+
+    // T009 — GET /profile with client key targeting a different client returns 403
+
+    [Fact]
+    public async Task GetClientProfile_WithClientKey_WrongClient_Returns403()
+    {
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/clients/{Guid.NewGuid()}/profile");
+        request.Headers.Add("X-Client-Key", ValidClientKey);
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    // T010 — GET /profile with no client key returns 401
+
+    [Fact]
+    public async Task GetClientProfile_WithoutClientKey_Returns401()
+    {
+        var httpClient = factory.CreateClient();
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get,
+            $"/clients/{factory.ClientId}/profile");
+        // No X-Client-Key header
+
+        var response = await httpClient.SendAsync(request);
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
 
     public sealed class ReviewerApiFactory : WebApplicationFactory<Program>
     {

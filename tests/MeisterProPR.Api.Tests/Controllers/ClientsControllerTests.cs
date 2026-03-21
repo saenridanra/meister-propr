@@ -435,12 +435,6 @@ public sealed class ClientsControllerTests(ClientsControllerTests.ClientsApiFact
                     .Returns(Task.FromResult<Guid?>(null));
                 services.AddSingleton(clientRegistry);
 
-                // Provide a stub IIdentityResolver that returns one identity for any display name.
-                var identityResolver = Substitute.For<IIdentityResolver>();
-                identityResolver.ResolveAsync(Arg.Any<string>(), Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-                    .Returns(Task.FromResult<IReadOnlyList<ResolvedIdentity>>([new ResolvedIdentity(Guid.NewGuid(), "Test Reviewer")]));
-                services.AddSingleton(identityResolver);
-
                 // Provide an in-memory IClientAdoCredentialRepository
                 var adoCredRepo = Substitute.For<IClientAdoCredentialRepository>();
                 adoCredRepo.GetByClientIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
