@@ -2,6 +2,7 @@ using FluentValidation;
 using FluentValidation.Results;
 using MeisterProPR.Application.DTOs;
 using MeisterProPR.Application.Interfaces;
+using MeisterProPR.Domain.Enums;
 using Microsoft.AspNetCore.Mvc;
 
 namespace MeisterProPR.Api.Controllers;
@@ -28,7 +29,8 @@ public sealed partial class ClientsController(
             client.IsActive,
             client.CreatedAt,
             client.HasAdoCredentials,
-            client.ReviewerId);
+            client.ReviewerId,
+            client.CommentResolutionBehavior);
     }
 
     private IActionResult? ValidateRequest(ValidationResult result)
@@ -353,7 +355,7 @@ public sealed partial class ClientsController(
             return this.Unauthorized(new { error = "Valid X-Admin-Key required." });
         }
 
-        var client = await clientAdminService.PatchAsync(clientId, request.IsActive, request.DisplayName);
+        var client = await clientAdminService.PatchAsync(clientId, request.IsActive, request.DisplayName, request.CommentResolutionBehavior);
         return client is null ? this.NotFound() : this.Ok(ToClientResponse(client));
     }
 
@@ -574,7 +576,8 @@ public sealed record ClientResponse(
     bool IsActive,
     DateTimeOffset CreatedAt,
     bool HasAdoCredentials,
-    Guid? ReviewerId);
+    Guid? ReviewerId,
+    CommentResolutionBehavior CommentResolutionBehavior);
 
 /// <summary>Crawl configuration response.</summary>
 public sealed record CrawlConfigResponse(
@@ -596,7 +599,10 @@ public sealed record CreateCrawlConfigRequest(
     int CrawlIntervalSeconds = 60);
 
 /// <summary>Request body for patching a client. All fields are optional; omitted fields are left unchanged.</summary>
-public sealed record PatchClientRequest(bool? IsActive = null, string? DisplayName = null);
+public sealed record PatchClientRequest(
+    bool? IsActive = null,
+    string? DisplayName = null,
+    CommentResolutionBehavior? CommentResolutionBehavior = null);
 
 /// <summary>Request body for patching a crawl configuration's active status.</summary>
 public sealed record PatchCrawlConfigRequest(bool IsActive);

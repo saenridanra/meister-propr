@@ -47,6 +47,7 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IClientAdoCredentialRepository, PostgresClientAdoCredentialRepository>();
             services.AddScoped<IMentionReplyJobRepository, EfMentionReplyJobRepository>();
             services.AddScoped<IMentionScanRepository, EfMentionScanRepository>();
+            services.AddScoped<IReviewPrScanRepository, EfReviewPrScanRepository>();
         }
         else
         {
@@ -54,6 +55,7 @@ public static class InfrastructureServiceExtensions
             services.AddSingleton<IJobRepository, InMemoryJobRepository>();
             services.AddSingleton<IClientRegistry, EnvVarClientRegistry>();
             services.AddSingleton<IClientAdoCredentialRepository, NullClientAdoCredentialRepository>();
+            services.AddSingleton<IReviewPrScanRepository, NullReviewPrScanRepository>();
         }
 
         // ADO token validation (identity verification only).
@@ -83,9 +85,11 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IPullRequestFetcher, StubPullRequestFetcher>();
             services.AddScoped<IAdoCommentPoster, NoOpAdoCommentPoster>();
             services.AddScoped<IAssignedPullRequestFetcher, StubAssignedPrFetcher>();
+            services.AddScoped<IIdentityResolver, StubIdentityResolver>();
             services.AddSingleton<IAdoReviewerManager, StubAdoReviewerManager>();
             services.AddSingleton<IActivePrFetcher, StubActivePrFetcher>();
             services.AddScoped<IAdoThreadReplier, StubAdoThreadReplier>();
+            services.AddScoped<IAdoThreadClient, StubAdoThreadClient>();
         }
         else
         {
@@ -94,9 +98,16 @@ public static class InfrastructureServiceExtensions
             services.AddScoped<IPullRequestFetcher, AdoPullRequestFetcher>();
             services.AddScoped<IAdoCommentPoster, AdoCommentPoster>();
             services.AddScoped<IAssignedPullRequestFetcher, AdoAssignedPrFetcher>();
+            services.AddHttpClient("AdoIdentity");
+            services.AddScoped<IIdentityResolver>(sp =>
+                new AdoIdentityResolver(
+                    credential,
+                    sp.GetRequiredService<IHttpClientFactory>(),
+                    sp.GetRequiredService<IClientAdoCredentialRepository>()));
             services.AddSingleton<IAdoReviewerManager, AdoReviewerManager>();
             services.AddSingleton<IActivePrFetcher, AdoActivePrFetcher>();
             services.AddScoped<IAdoThreadReplier, AdoThreadReplier>();
+            services.AddScoped<IAdoThreadClient, AdoThreadClient>();
         }
 
         // AI review (provider-agnostic via IChatClient)
@@ -111,6 +122,7 @@ public static class InfrastructureServiceExtensions
             configuration["AI_API_KEY"]));
 
         services.AddSingleton<IAiReviewCore, AgentAiReviewCore>();
+        services.AddSingleton<IAiCommentResolutionCore, AgentAiCommentResolutionCore>();
         services.AddSingleton<IMentionAnswerService, AgentMentionAnswerService>();
 
         return services;

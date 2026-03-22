@@ -1,3 +1,4 @@
+using MeisterProPR.Domain.Enums;
 using MeisterProPR.Infrastructure.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -44,6 +45,11 @@ internal sealed class ClientEntityTypeConfiguration : IEntityTypeConfiguration<C
         builder.Property(c => c.ReviewerId)
             .HasColumnName("reviewer_id")
             .IsRequired(false);
+
+        builder.Property(c => c.CommentResolutionBehavior)
+            .HasColumnName("comment_resolution_behavior")
+            .HasConversion<int>()
+            .HasDefaultValue(CommentResolutionBehavior.Silent);
 
         builder.HasIndex(c => c.Key)
             .IsUnique()

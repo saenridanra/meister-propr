@@ -1,6 +1,7 @@
 using System.Security.Cryptography;
 using System.Text;
 using MeisterProPR.Application.Interfaces;
+using MeisterProPR.Domain.Enums;
 using Microsoft.Extensions.Configuration;
 
 namespace MeisterProPR.Infrastructure.Configuration;
@@ -59,6 +60,13 @@ public sealed class EnvVarClientRegistry : IClientRegistry
     public Task<Guid?> GetReviewerIdAsync(Guid clientId, CancellationToken ct = default)
     {
         return Task.FromResult<Guid?>(null);
+    }
+
+    /// <inheritdoc />
+    /// <remarks>Env-var mode has no database storage; defaults to <see cref="CommentResolutionBehavior.Silent" />.</remarks>
+    public Task<CommentResolutionBehavior> GetCommentResolutionBehaviorAsync(Guid clientId, CancellationToken ct = default)
+    {
+        return Task.FromResult(CommentResolutionBehavior.Silent);
     }
 
     /// <summary>Derives a stable, deterministic UUID from the key string using MD5.</summary>

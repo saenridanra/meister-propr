@@ -1,5 +1,6 @@
 using MeisterProPR.Application.DTOs;
 using MeisterProPR.Application.Interfaces;
+using MeisterProPR.Domain.Enums;
 using MeisterProPR.Infrastructure.Data;
 using MeisterProPR.Infrastructure.Data.Models;
 using Microsoft.EntityFrameworkCore;
@@ -52,6 +53,7 @@ public sealed class PostgresClientAdminService(MeisterProPRDbContext dbContext) 
         Guid clientId,
         bool? isActive,
         string? displayName,
+        CommentResolutionBehavior? commentResolutionBehavior = null,
         CancellationToken ct = default)
     {
         var client = await dbContext.Clients.FindAsync([clientId], ct);
@@ -68,6 +70,11 @@ public sealed class PostgresClientAdminService(MeisterProPRDbContext dbContext) 
         if (displayName is not null)
         {
             client.DisplayName = displayName;
+        }
+
+        if (commentResolutionBehavior.HasValue)
+        {
+            client.CommentResolutionBehavior = commentResolutionBehavior.Value;
         }
 
         await dbContext.SaveChangesAsync(ct);
@@ -118,6 +125,7 @@ public sealed class PostgresClientAdminService(MeisterProPRDbContext dbContext) 
             client is { AdoTenantId: not null, AdoClientId: not null, AdoClientSecret: not null },
             client.AdoTenantId,
             client.AdoClientId,
-            client.ReviewerId);
+            client.ReviewerId,
+            client.CommentResolutionBehavior);
     }
 }

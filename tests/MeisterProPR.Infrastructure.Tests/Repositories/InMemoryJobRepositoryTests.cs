@@ -34,7 +34,7 @@ public class InMemoryJobRepositoryTests
     }
 
     [Fact]
-    public void FindActiveJob_ReturnsExistingCompletedJob()
+    public void FindActiveJob_ReturnsNullForCompletedJob()
     {
         var repo = new InMemoryJobRepository();
         var job = CreateJob();
@@ -42,7 +42,7 @@ public class InMemoryJobRepositoryTests
         job.Status = JobStatus.Completed;
 
         var found = repo.FindActiveJob(job.OrganizationUrl, job.ProjectId, job.RepositoryId, job.PullRequestId, job.IterationId);
-        Assert.NotNull(found);
+        Assert.Null(found);
     }
 
     [Fact]

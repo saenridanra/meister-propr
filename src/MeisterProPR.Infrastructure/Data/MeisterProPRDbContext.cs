@@ -25,6 +25,12 @@ public sealed class MeisterProPRDbContext(DbContextOptions<MeisterProPRDbContext
     /// <summary>Mention per-PR scan watermarks table.</summary>
     public DbSet<MentionPrScan> MentionPrScans => this.Set<MentionPrScan>();
 
+    /// <summary>Review PR scan watermarks table (one row per client+repository+PR).</summary>
+    public DbSet<ReviewPrScan> ReviewPrScans => this.Set<ReviewPrScan>();
+
+    /// <summary>Per-thread reply watermarks within a review PR scan.</summary>
+    public DbSet<ReviewPrScanThread> ReviewPrScanThreads => this.Set<ReviewPrScanThread>();
+
     /// <inheritdoc />
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {

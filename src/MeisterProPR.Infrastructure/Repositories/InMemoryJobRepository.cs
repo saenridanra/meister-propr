@@ -52,7 +52,7 @@ public sealed class InMemoryJobRepository : IJobRepository
             j.RepositoryId == repositoryId &&
             j.PullRequestId == pullRequestId &&
             j.IterationId == iterationId &&
-            j.Status != JobStatus.Failed);
+            (j.Status == JobStatus.Pending || j.Status == JobStatus.Processing));
     }
 
     /// <inheritdoc />

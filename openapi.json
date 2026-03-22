@@ -1773,10 +1773,22 @@
             "type": "string",
             "format": "uuid",
             "nullable": true
+          },
+          "commentResolutionBehavior": {
+            "$ref": "#/components/schemas/CommentResolutionBehavior"
           }
         },
         "additionalProperties": false,
         "description": "Client response — key, ADO secret, and credential metadata are never included."
+      },
+      "CommentResolutionBehavior": {
+        "enum": [
+          "disabled",
+          "silent",
+          "withReply"
+        ],
+        "type": "string",
+        "description": "Controls how the reviewer handles thread resolution: disabled skips resolution; silent resolves without a reply; withReply posts a reply before resolving."
       },
       "CommentSeverity": {
         "enum": [
@@ -1972,6 +1984,10 @@
           "displayName": {
             "type": "string",
             "nullable": true
+          },
+          "commentResolutionBehavior": {
+            "$ref": "#/components/schemas/CommentResolutionBehavior",
+            "nullable": true
           }
         },
         "additionalProperties": false,
@@ -2012,7 +2028,7 @@
             "nullable": true
           }
         },
-        "additionalProperties": { }
+        "additionalProperties": {}
       },
       "ReviewCommentDto": {
         "type": "object",

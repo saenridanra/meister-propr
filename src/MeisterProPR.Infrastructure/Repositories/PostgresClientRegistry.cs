@@ -1,4 +1,5 @@
 using MeisterProPR.Application.Interfaces;
+using MeisterProPR.Domain.Enums;
 using MeisterProPR.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -50,6 +51,15 @@ public sealed partial class PostgresClientRegistry(
         return await dbContext.Clients
             .Where(c => c.Id == clientId)
             .Select(c => c.ReviewerId)
+            .FirstOrDefaultAsync(ct);
+    }
+
+    /// <inheritdoc />
+    public async Task<CommentResolutionBehavior> GetCommentResolutionBehaviorAsync(Guid clientId, CancellationToken ct = default)
+    {
+        return await dbContext.Clients
+            .Where(c => c.Id == clientId)
+            .Select(c => c.CommentResolutionBehavior)
             .FirstOrDefaultAsync(ct);
     }
 

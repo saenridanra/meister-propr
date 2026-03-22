@@ -98,4 +98,43 @@ public class EnumTests
     {
         Assert.True(Enum.TryParse<JobStatus>(name, out _));
     }
+
+    [Fact]
+    public void CommentResolutionBehavior_HasDisabledValue()
+    {
+        Assert.True(Enum.IsDefined(typeof(CommentResolutionBehavior), CommentResolutionBehavior.Disabled));
+    }
+
+    [Fact]
+    public void CommentResolutionBehavior_HasSilentValue()
+    {
+        Assert.True(Enum.IsDefined(typeof(CommentResolutionBehavior), CommentResolutionBehavior.Silent));
+    }
+
+    [Fact]
+    public void CommentResolutionBehavior_HasWithReplyValue()
+    {
+        Assert.True(Enum.IsDefined(typeof(CommentResolutionBehavior), CommentResolutionBehavior.WithReply));
+    }
+
+    [Theory]
+    [InlineData("Disabled")]
+    [InlineData("Silent")]
+    [InlineData("WithReply")]
+    public void CommentResolutionBehavior_ValuesHaveExpectedNames(string name)
+    {
+        Assert.True(Enum.TryParse<CommentResolutionBehavior>(name, out _));
+    }
+
+    [Fact]
+    public void CommentResolutionBehavior_SilentIsDefaultValue()
+    {
+        Assert.Equal(1, (int)CommentResolutionBehavior.Silent);
+    }
+
+    [Fact]
+    public void CommentResolutionBehavior_DisabledIsZero()
+    {
+        Assert.Equal(0, (int)CommentResolutionBehavior.Disabled);
+    }
 }

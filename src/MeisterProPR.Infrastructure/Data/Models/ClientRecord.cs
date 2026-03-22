@@ -1,3 +1,5 @@
+using MeisterProPR.Domain.Enums;
+
 namespace MeisterProPR.Infrastructure.Data.Models;
 
 /// <summary>EF Core persistence model for a registered API client.</summary>
@@ -12,4 +14,10 @@ public sealed class ClientRecord
     public string? AdoClientId { get; set; }
     public string? AdoClientSecret { get; set; }
     public Guid? ReviewerId { get; set; }
+
+    /// <summary>
+    ///     Determines how the reviewer behaves when automatically resolving its own comment threads.
+    ///     Defaults to <see cref="Domain.Enums.CommentResolutionBehavior.Silent" />.
+    /// </summary>
+    public CommentResolutionBehavior CommentResolutionBehavior { get; set; } = CommentResolutionBehavior.Silent;
 }

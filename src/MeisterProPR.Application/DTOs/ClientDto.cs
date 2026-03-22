@@ -1,3 +1,5 @@
+using MeisterProPR.Domain.Enums;
+
 namespace MeisterProPR.Application.DTOs;
 
 /// <summary>
@@ -12,4 +14,5 @@ public sealed record ClientDto(
     bool HasAdoCredentials,
     string? AdoTenantId,
     string? AdoClientId,
-    Guid? ReviewerId);
+    Guid? ReviewerId,
+    CommentResolutionBehavior CommentResolutionBehavior);

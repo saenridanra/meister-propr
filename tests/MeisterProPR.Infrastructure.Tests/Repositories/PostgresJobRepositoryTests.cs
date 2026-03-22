@@ -60,8 +60,10 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
     }
 
     [Fact]
-    public async Task FindActiveJob_ReturnsJobForCompleted()
+    public async Task FindActiveJob_ReturnsNullForCompletedJob()
     {
+        // Completed jobs no longer block re-creation — the orchestrator's skip logic
+        // handles "nothing changed" cases so that conversational replies can still fire.
         var job = MakeJob();
         await this._repo.AddAsync(job);
         await this._repo.TryTransitionAsync(job.Id, JobStatus.Pending, JobStatus.Processing);
@@ -73,7 +75,7 @@ public sealed class PostgresJobRepositoryTests(PostgresContainerFixture fixture)
             job.RepositoryId,
             job.PullRequestId,
             job.IterationId);
-        Assert.NotNull(found);
+        Assert.Null(found);
     }
 
     [Fact]

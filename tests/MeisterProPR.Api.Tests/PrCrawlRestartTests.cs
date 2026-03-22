@@ -14,9 +14,10 @@ using NSubstitute;
 namespace MeisterProPR.Api.Tests;
 
 /// <summary>
-///     Integration tests verifying restart-idempotency (A2 fix):
-///     a PR with an existing Completed review job must NOT trigger a second job
-///     after service restart (i.e. in a fresh DI scope backed by the same Postgres DB).
+///     Integration tests verifying crawl re-evaluation behaviour:
+///     a PR with an existing Completed review job must trigger a new job on the next crawl so
+///     that conversational replies and code-change re-evaluations are processed. The orchestrator's
+///     skip logic handles "nothing actually changed" cases by fast-exiting early.
 /// </summary>
 [Collection("PostgresApiIntegration")]
 public sealed class PrCrawlRestartTests(PostgresContainerFixture fixture) : IAsyncLifetime
@@ -27,7 +28,7 @@ public sealed class PrCrawlRestartTests(PostgresContainerFixture fixture) : IAsy
 
     public async Task InitializeAsync()
     {
-        // Wipe jobs so the count assertion (total == 1) is not polluted by other tests.
+        // Wipe jobs so the count assertion is not polluted by other tests.
         var opts = new DbContextOptionsBuilder<MeisterProPRDbContext>()
             .UseNpgsql(fixture.ConnectionString)
             .Options;
@@ -39,10 +40,11 @@ public sealed class PrCrawlRestartTests(PostgresContainerFixture fixture) : IAsy
     ///     Seeds a Completed job for PR #42 directly into Postgres (before the app starts),
     ///     then starts the WebApplicationFactory (simulating a service restart).
     ///     Runs <see cref="IPrCrawlService.CrawlAsync" /> in a fresh scope with a stubbed
-    ///     fetcher returning the same PR and asserts the total job count stays at 1.
+    ///     fetcher returning the same PR and asserts a new job IS created (total == 2) so
+    ///     that the orchestrator can evaluate new replies or code changes.
     /// </summary>
     [Fact]
-    public async Task CrawlAsync_CompletedJobExistsAfterRestart_DoesNotCreateDuplicate()
+    public async Task CrawlAsync_CompletedJobExistsAfterRestart_CreatesNewJobForReEvaluation()
     {
         var connectionString = fixture.ConnectionString;
 
@@ -123,12 +125,13 @@ public sealed class PrCrawlRestartTests(PostgresContainerFixture fixture) : IAsy
             await crawlService.CrawlAsync();
         }
 
-        // Step 6 — assert total is still 1; no duplicate was created
+        // Step 6 — assert a new job was created (total == 2); the orchestrator's skip
+        // logic will fast-exit if there are no new commits or replies.
         using (var scope = factory.Services.CreateScope())
         {
             var jobs = scope.ServiceProvider.GetRequiredService<IJobRepository>();
             var (total, _) = await jobs.GetAllJobsAsync(100, 0, null);
-            Assert.Equal(1, total);
+            Assert.Equal(2, total);
         }
     }
 }

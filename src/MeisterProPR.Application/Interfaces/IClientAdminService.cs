@@ -1,4 +1,5 @@
 using MeisterProPR.Application.DTOs;
+using MeisterProPR.Domain.Enums;
 
 namespace MeisterProPR.Application.Interfaces;
 
@@ -30,11 +31,13 @@ public interface IClientAdminService
     /// <param name="clientId">Client identifier.</param>
     /// <param name="isActive">When non-null, sets the active flag.</param>
     /// <param name="displayName">When non-null, replaces the display name.</param>
+    /// <param name="commentResolutionBehavior">When non-null, sets the comment resolution behavior.</param>
     /// <param name="ct">Cancellation token.</param>
     Task<ClientDto?> PatchAsync(
         Guid clientId,
         bool? isActive,
         string? displayName,
+        CommentResolutionBehavior? commentResolutionBehavior = null,
         CancellationToken ct = default);
 
     /// <summary>

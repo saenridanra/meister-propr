@@ -254,6 +254,129 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/clients/{clientId}/ado-credentials": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Sets or replaces ADO service principal credentials for a client. Requires `X-Admin-Key`. */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Client identifier. */
+                    clientId: string;
+                };
+                cookie?: never;
+            };
+            /** @description ADO credential details — all three fields required. */
+            requestBody?: {
+                content: {
+                    "application/json": components["schemas"]["SetAdoCredentialsRequest"];
+                    "text/json": components["schemas"]["SetAdoCredentialsRequest"];
+                    "application/*+json": components["schemas"]["SetAdoCredentialsRequest"];
+                };
+            };
+            responses: {
+                /** @description Credentials stored. */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description One or more fields are missing or blank. */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Missing or invalid `X-Admin-Key`. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Client not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /**
+         * Removes ADO service principal credentials from a client. Requires `X-Admin-Key`.
+         *     The client falls back to the global backend identity on subsequent ADO operations.
+         */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Client identifier. */
+                    clientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Credentials removed (or client had no credentials — idempotent). */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Missing or invalid `X-Admin-Key`. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Client not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/clients/{clientId}": {
         parameters: {
             query?: never;
@@ -414,129 +537,6 @@ export interface paths {
         };
         trace?: never;
     };
-    "/clients/{clientId}/ado-credentials": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        /** Sets or replaces ADO service principal credentials for a client. Requires `X-Admin-Key`. */
-        put: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Client identifier. */
-                    clientId: string;
-                };
-                cookie?: never;
-            };
-            /** @description ADO credential details — all three fields required. */
-            requestBody?: {
-                content: {
-                    "application/json": components["schemas"]["SetAdoCredentialsRequest"];
-                    "text/json": components["schemas"]["SetAdoCredentialsRequest"];
-                    "application/*+json": components["schemas"]["SetAdoCredentialsRequest"];
-                };
-            };
-            responses: {
-                /** @description Credentials stored. */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description One or more fields are missing or blank. */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Missing or invalid `X-Admin-Key`. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Client not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        post?: never;
-        /**
-         * Removes ADO service principal credentials from a client. Requires `X-Admin-Key`.
-         *     The client falls back to the global backend identity on subsequent ADO operations.
-         */
-        delete: {
-            parameters: {
-                query?: never;
-                header?: never;
-                path: {
-                    /** @description Client identifier. */
-                    clientId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description Credentials removed (or client had no credentials — idempotent). */
-                204: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content?: never;
-                };
-                /** @description Missing or invalid `X-Admin-Key`. */
-                401: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Client not found. */
-                404: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "text/plain": components["schemas"]["ProblemDetails"];
-                        "application/json": components["schemas"]["ProblemDetails"];
-                        "text/json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/clients/{clientId}/crawl-configurations/{configId}": {
         parameters: {
             query?: never;
@@ -685,7 +685,8 @@ export interface paths {
         };
         get?: never;
         /**
-         * Sets or replaces the ADO reviewer identity GUID for a client. Requires `X-Admin-Key`.
+         * Sets or replaces the ADO reviewer identity GUID for a client.
+         *     Accepts either `X-Admin-Key` (any client) or `X-Client-Key` (own client only).
          *     Until this is set, review jobs for the client will be rejected.
          */
         put: {
@@ -725,8 +726,19 @@ export interface paths {
                         "text/json": components["schemas"]["ProblemDetails"];
                     };
                 };
-                /** @description Missing or invalid `X-Admin-Key`. */
+                /** @description Missing or invalid authentication header. */
                 401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Caller does not own this client. */
+                403: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -749,6 +761,83 @@ export interface paths {
                 };
             };
         };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/clients/{clientId}/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Returns the profile of the specified client. Requires `X-Client-Key` that owns the client.
+         *     Exposes a subset of client data safe for client-level callers; does not include admin-only fields.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    /** @description Client identifier. */
+                    clientId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Client profile. */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ClientProfileResponse"];
+                        "application/json": components["schemas"]["ClientProfileResponse"];
+                        "text/json": components["schemas"]["ClientProfileResponse"];
+                    };
+                };
+                /** @description Missing or invalid `X-Client-Key`. */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Caller does not own this client. */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Client not found. */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "text/plain": components["schemas"]["ProblemDetails"];
+                        "application/json": components["schemas"]["ProblemDetails"];
+                        "text/json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -894,9 +983,15 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    /** @description ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member. */
+                    /**
+                     * @description ADO personal access token used solely to verify the requesting user is an authenticated ADO
+                     *     organisation member.
+                     */
                     "X-Ado-Token"?: string;
-                    /** @description ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs. */
+                    /**
+                     * @description ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension
+                     *     session tokens; omit for PATs.
+                     */
                     "X-Ado-Org-Url"?: string;
                 };
                 path: {
@@ -962,9 +1057,15 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    /** @description ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member. */
+                    /**
+                     * @description ADO personal access token used solely to verify the requesting user is an authenticated ADO
+                     *     organisation member.
+                     */
                     "X-Ado-Token"?: string;
-                    /** @description ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension session tokens; omit for PATs. */
+                    /**
+                     * @description ADO organisation URL (e.g. https://dev.azure.com/myorg). Required when using browser-extension
+                     *     session tokens; omit for PATs.
+                     */
                     "X-Ado-Org-Url"?: string;
                 };
                 path?: never;
@@ -1002,7 +1103,10 @@ export interface paths {
             parameters: {
                 query?: never;
                 header?: {
-                    /** @description ADO personal access token used solely to verify the requesting user is an authenticated ADO organisation member. */
+                    /**
+                     * @description ADO personal access token used solely to verify the requesting user is an authenticated ADO
+                     *     organisation member.
+                     */
                     "X-Ado-Token"?: string;
                 };
                 path?: never;
@@ -1059,9 +1163,25 @@ export interface paths {
         trace?: never;
     };
 }
+
 export type webhooks = Record<string, never>;
+
 export interface components {
     schemas: {
+        /**
+         * @description Client profile response — exposes only fields safe for client-level callers.
+         *     Admin-only fields such as `HasAdoCredentials` are intentionally omitted.
+         */
+        ClientProfileResponse: {
+            /** Format: uuid */
+            id?: string;
+            displayName?: string | null;
+            isActive?: boolean;
+            /** Format: date-time */
+            createdAt?: string;
+            /** Format: uuid */
+            reviewerId?: string | null;
+        };
         /** @description Client response — key, ADO secret, and credential metadata are never included. */
         ClientResponse: {
             /** Format: uuid */
@@ -1073,7 +1193,13 @@ export interface components {
             hasAdoCredentials?: boolean;
             /** Format: uuid */
             reviewerId?: string | null;
+            commentResolutionBehavior?: components["schemas"]["CommentResolutionBehavior"];
         };
+        /**
+         * @description Controls how the reviewer handles thread resolution: disabled skips resolution; silent resolves without a reply; withReply posts a reply before resolving.
+         * @enum {string}
+         */
+        CommentResolutionBehavior: "disabled" | "silent" | "withReply";
         /**
          * @description Severity level of a review comment.
          * @enum {string}
@@ -1153,6 +1279,7 @@ export interface components {
         PatchClientRequest: {
             isActive?: boolean | null;
             displayName?: string | null;
+            commentResolutionBehavior?: components["schemas"]["CommentResolutionBehavior"];
         };
         /** @description Request body for patching a crawl configuration's active status. */
         PatchCrawlConfigRequest: {
@@ -1250,5 +1377,6 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+
 export type $defs = Record<string, never>;
 export type operations = Record<string, never>;
