@@ -18,6 +18,14 @@ back as threaded comments — anchored to the relevant file and line number.
 
 ---
 
+## AI Dev Days Hackathon
+
+The project was built for
+the [AI Dev Days Hackathon](https://github.com/Azure/AI-Dev-Days-Hackathon/blob/main/README.md).
+
+The submission state is available with tag `ai-dev-days-submission` commit
+`db1683a` [here](https://github.com/saenridanra/meister-propr/releases/tag/ai-dev-days-submission).
+
 ## Features
 
 - **AI review on demand** — POST a PR reference, get comments posted directly in ADO
