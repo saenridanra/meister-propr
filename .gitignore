@@ -37,6 +37,10 @@ Thumbs.db
 packages/
 *.nupkg
 
+# Speckit / feature specs
+.specify/
+specs/
+
 # Claude / Copilot / Gemini
 .claude
 .github/agents
