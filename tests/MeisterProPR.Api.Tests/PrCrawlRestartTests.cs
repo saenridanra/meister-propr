@@ -1,6 +1,7 @@
 using MeisterProPR.Api.Tests.Fixtures;
 using MeisterProPR.Application.DTOs;
 using MeisterProPR.Application.Interfaces;
+using MeisterProPR.Application.Services;
 using MeisterProPR.Domain.Entities;
 using MeisterProPR.Domain.ValueObjects;
 using MeisterProPR.Infrastructure.Data;
@@ -9,6 +10,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using NSubstitute;
 
 namespace MeisterProPR.Api.Tests;
@@ -112,16 +114,23 @@ public sealed class PrCrawlRestartTests(PostgresContainerFixture fixture) : IAsy
                     services.AddSingleton(Substitute.For<IPullRequestFetcher>());
                     services.AddSingleton(Substitute.For<IAdoCommentPoster>());
                     services.AddSingleton(prFetcher);
-                    services.AddSingleton(crawlConfigRepo);
                 });
             });
 
         _ = factory.CreateClient(); // triggers startup; migrations re-run (no-op), recovery runs
 
-        // Step 5 — fresh scope simulates the crawl worker running after restart
+        // Step 5 — simulate the crawl worker running after restart by constructing
+        // PrCrawlService directly with the mock config repo. This avoids a race
+        // with the background AdoPrCrawlerWorker startup crawl, which uses the real
+        // (empty) PostgresCrawlConfigurationRepository and is therefore a no-op.
         using (var scope = factory.Services.CreateScope())
         {
-            var crawlService = scope.ServiceProvider.GetRequiredService<IPrCrawlService>();
+            var jobs = scope.ServiceProvider.GetRequiredService<IJobRepository>();
+            var crawlService = new PrCrawlService(
+                crawlConfigRepo,
+                prFetcher,
+                jobs,
+                Substitute.For<ILogger<PrCrawlService>>());
             await crawlService.CrawlAsync();
         }
 
