@@ -5,7 +5,7 @@
 
 <p align="center">
   <a href="https://github.com/saenridanra/meister-propr/actions/workflows/ci.yml"><img src="https://github.com/saenridanra/meister-propr/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow.svg" alt="License: MIT"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL%20v3-blue.svg" alt="License: AGPL v3"></a>
   <img src="https://img.shields.io/badge/.NET-10-512BD4?logo=dotnet" alt=".NET 10">
 </p>
 
@@ -137,7 +137,10 @@ dotnet test   # 235 tests — no Azure credentials or database required
 
 ## License · Security · Contributing
 
-- [MIT License](LICENSE)
+- [AGPLv3 License](LICENSE) — free for individuals, home labs, and open-source projects; network use of modified
+  versions requires source disclosure
+- [Commercial License](COMMERCIAL.md) — for businesses that need proprietary modifications, SaaS rights, or professional
+  support
 - [Security Policy](SECURITY.md) — report vulnerabilities privately
 
 
